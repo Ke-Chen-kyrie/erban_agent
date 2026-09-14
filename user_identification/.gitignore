@@ -1,0 +1,9 @@
+.venv/
+.env
+data/
+*.whl
+*.egg-info/
+voiceprint.db*
+*.pyc
+__pycache__/
+.idea/

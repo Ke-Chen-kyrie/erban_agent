@@ -1,0 +1,17 @@
+[project]
+name = "robot-common"
+version = "0.1.0"
+requires-python = ">=3.13"
+dependencies = ["websockets", "websocket-client", "rosbags", "python-dotenv"]
+
+[project.scripts]
+turn = "robot_common.commands:turn_main"
+pick = "robot_common.commands:pick_main"
+place = "robot_common.commands:place_main"
+get-status = "robot_common.commands:get_status_main"
+extend-hand = "robot_common.commands:extend_hand_main"
+raise-hand = "robot_common.commands:raise_hand_main"
+lower-hand = "robot_common.commands:lower_hand_main"
+exec-trace = "robot_common.commands:exec_trace_main"
+retract-hand = "robot_common.commands:retract_hand_main"
+list-trace = "robot_common.commands:list_trace_main"

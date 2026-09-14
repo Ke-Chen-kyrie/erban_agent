@@ -1,0 +1,110 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1880" height="1060" viewBox="0 0 1880 1060">
+  <defs>
+    <linearGradient id="cardGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#fff4f4"/>
+      <stop offset="62%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#ffffff"/>
+    </linearGradient>
+    <linearGradient id="accentGrad" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#e1251b"/>
+      <stop offset="100%" stop-color="#c49a5a"/>
+    </linearGradient>
+    <filter id="shadow" x="-8%" y="-8%" width="116%" height="116%">
+      <feDropShadow dx="0" dy="16" stdDeviation="16" flood-color="#e1251b" flood-opacity="0.07"/>
+    </filter>
+    <style>
+      .bg { fill: #fffefe; }
+      .card { fill: url(#cardGrad); stroke: #ffc7c2; stroke-width: 2; filter: url(#shadow); }
+      .num { font-family: "Roboto Mono", Consolas, monospace; font-size: 30px; font-weight: 800; fill: #e1251b; letter-spacing: 1.5px; }
+      .cap { font-family: Inter, Arial, sans-serif; font-size: 31px; font-weight: 800; fill: #242124; }
+      .cap-long { font-size: 28px; }
+      .desc { font-family: Inter, Arial, sans-serif; font-size: 23.5px; font-weight: 500; fill: #2c2929; }
+      .accent { fill: url(#accentGrad); }
+    </style>
+  </defs>
+  <rect class="bg" width="1880" height="1060" rx="36"/>
+  <g transform="translate(78 76)">
+    <g transform="translate(0 0)">
+      <rect class="card" width="556" height="280" rx="22"/>
+      <text class="num" x="42" y="62">01</text>
+      <text class="cap" x="96" y="63">Real-time translation</text>
+      <text class="desc" x="42" y="122">Translates subtitles and text in real time,</text>
+      <text class="desc" x="42" y="158">keeping pace with the video as it plays,</text>
+      <text class="desc" x="42" y="194">rather than answering a single frame.</text>
+      <rect class="accent" x="428" y="232" width="86" height="7" rx="4"/>
+    </g>
+    <g transform="translate(618 0)">
+      <rect class="card" width="556" height="280" rx="22"/>
+      <text class="num" x="42" y="62">02</text>
+      <text class="cap" x="96" y="63">Monitoring and alerting</text>
+      <text class="desc" x="42" y="122">Watches a live feed and raises an alert</text>
+      <text class="desc" x="42" y="158">within a second of an emergency, right</text>
+      <text class="desc" x="42" y="194">when it happens.</text>
+      <rect class="accent" x="428" y="232" width="86" height="7" rx="4"/>
+    </g>
+    <g transform="translate(1236 0)">
+      <rect class="card" width="556" height="280" rx="22"/>
+      <text class="num" x="42" y="62">03</text>
+      <text class="cap" x="96" y="63">App guidance</text>
+      <text class="desc" x="42" y="122">Follows your phone screen as you use</text>
+      <text class="desc" x="42" y="158">an app and walks through the task in step</text>
+      <text class="desc" x="42" y="194">with what is on it right now.</text>
+      <rect class="accent" x="428" y="232" width="86" height="7" rx="4"/>
+    </g>
+
+    <g transform="translate(0 314)">
+      <rect class="card" width="556" height="280" rx="22"/>
+      <text class="num" x="42" y="62">04</text>
+      <text class="cap" x="96" y="63">Live commentary</text>
+      <text class="desc" x="42" y="122">Narrates what is on screen as it unfolds,</text>
+      <text class="desc" x="42" y="158">from a slide deck to a live match, keeping</text>
+      <text class="desc" x="42" y="194">up in real time.</text>
+      <rect class="accent" x="428" y="232" width="86" height="7" rx="4"/>
+    </g>
+    <g transform="translate(618 314)">
+      <rect class="card" width="556" height="280" rx="22"/>
+      <text class="num" x="42" y="62">05</text>
+      <text class="cap" x="96" y="63">Real-time counting</text>
+      <text class="desc" x="42" y="122">Counts target objects or actions on the fly,</text>
+      <text class="desc" x="42" y="158">updating the tally each time one appears.</text>
+      <rect class="accent" x="428" y="232" width="86" height="7" rx="4"/>
+    </g>
+    <g transform="translate(1236 314)">
+      <rect class="card" width="556" height="280" rx="22"/>
+      <text class="num" x="42" y="62">06</text>
+      <text class="cap" x="96" y="63">Time awareness</text>
+      <text class="desc" x="42" y="122">Acts on its own sense of elapsed time,</text>
+      <text class="desc" x="42" y="158">speaking on a set interval or reminding</text>
+      <text class="desc" x="42" y="194">you a few seconds later.</text>
+      <rect class="accent" x="428" y="232" width="86" height="7" rx="4"/>
+    </g>
+
+    <g transform="translate(0 628)">
+      <rect class="card" width="556" height="280" rx="22"/>
+      <text class="num" x="42" y="62">07</text>
+      <text class="cap cap-long" x="96" y="63">Long visual memory (5+ min)</text>
+      <text class="desc" x="42" y="122">Holds useful details from minutes earlier</text>
+      <text class="desc" x="42" y="158">in the stream and brings them back when</text>
+      <text class="desc" x="42" y="194">they matter.</text>
+      <rect class="accent" x="428" y="232" width="86" height="7" rx="4"/>
+    </g>
+    <g transform="translate(618 628)">
+      <rect class="card" width="556" height="280" rx="22"/>
+      <text class="num" x="42" y="62">08</text>
+      <text class="cap" x="96" y="63">Visual-driven interaction</text>
+      <text class="desc" x="42" y="122">Reads scene changes to interact naturally,</text>
+      <text class="desc" x="42" y="158">like greeting a friend the moment they</text>
+      <text class="desc" x="42" y="194">step into view.</text>
+      <rect class="accent" x="428" y="232" width="86" height="7" rx="4"/>
+    </g>
+    <g transform="translate(1236 628)">
+      <rect class="card" width="556" height="280" rx="22"/>
+      <text class="num" x="42" y="62">09</text>
+      <text class="cap" x="96" y="63">Agent delegation</text>
+      <text class="desc" x="42" y="122">Hands hard subtasks to a background</text>
+      <text class="desc" x="42" y="158">model or agent, while continuing to watch</text>
+      <text class="desc" x="42" y="194">and interact as the answer comes back.</text>
+      <rect class="accent" x="428" y="232" width="86" height="7" rx="4"/>
+    </g>
+  </g>
+</svg>

@@ -1,0 +1,52 @@
+# --- 虚拟环境(大,不入库)---
+.venv/
+venv/
+
+# --- 模型权重 / 声纹 / 人脸 ---
+**/models/
+**/face_detected_model/
+**/voiceprint/
+
+# --- 数据 / 输出 / 日志 ---
+**/data/
+**/result/
+**/video_segments/
+**/debug_files/
+**/certs/
+
+# --- 二进制 / 媒体 / 打包文件 ---
+*.onnx
+*.whl
+*.bin
+*.pt
+*.pth
+*.pkl
+*.npy
+*.npz
+*.h5
+*.safetensors
+*.tar
+*.zip
+*.gz
+*.so
+*.a
+*.mp4
+*.avi
+*.wav
+*.png
+*.jpg
+*.jpeg
+*.mp3
+*.pcm
+
+# --- 编辑器 / 缓存 / 本地 ---
+.idea/
+.claude/
+__pycache__/
+*.py[cod]
+.DS_Store
+*.log
+
+# --- 凭据 / 密钥(绝不入库)===
+# 精确名 .env = 真实密钥,直接排除;保留 .env.example(占位模板)
+.env

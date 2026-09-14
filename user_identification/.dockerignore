@@ -1,0 +1,12 @@
+.venv/
+__pycache__/
+*.pyc
+.idea/
+.env
+data/
+*.egg-info/
+*.zip
+.git/
+.gitignore
+CLAUDE.md
+voiceprint.db*

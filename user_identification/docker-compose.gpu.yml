@@ -1,0 +1,12 @@
+# GPU overlay — extends docker-compose.yml for NVIDIA GPU support
+# Usage: docker compose -f docker-compose.yml -f docker-compose.gpu.yml build --build-arg ONNXRUNTIME_MODE=gpu
+#        docker compose -f docker-compose.yml -f docker-compose.gpu.yml up -d
+
+services:
+  user-identification:
+    build:
+      args:
+        ONNXRUNTIME_MODE: gpu
+    runtime: nvidia
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all

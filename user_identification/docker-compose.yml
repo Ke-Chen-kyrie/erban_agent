@@ -1,0 +1,16 @@
+services:
+  user-identification:
+    build:
+      context: .
+      args:
+        # cpu (default) | gpu (auto-detects x86_64 / aarch64)
+        ONNXRUNTIME_MODE: cpu
+    image: user-identification:latest
+    container_name: user-identification
+    ports:
+      - "8001:8001"
+    volumes:
+      - ./data:/app/data
+    env_file:
+      - .env
+    restart: unless-stopped

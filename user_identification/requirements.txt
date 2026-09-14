@@ -1,0 +1,31 @@
+# ── Server ──
+fastapi>=0.115.0
+uvicorn[standard]>=0.30.0
+python-multipart>=0.0.9
+aiosqlite>=0.20.0
+aiofiles>=24.1.0
+python-dotenv>=1.0.0
+
+# ── Voiceprint SDK (xunfei cloud) ──
+-e voiceprint/xunfei-cloud/naviai_voiceprint-0.3.0
+
+# ── Alibaba Cloud FaceBody SDK ──
+alibabacloud_facebody20191230>=6.0.0
+alibabacloud-tea-openapi>=0.4.4
+alibabacloud-credentials>=1.0.8
+
+# ── Edge voiceprint SDKs (CAM++ / ERes2Net / ECAPA) ──
+chromadb
+soundfile
+kaldi-native-fbank
+-e voiceprint/campp/sdk
+-e voiceprint/eres2net/sdk
+-e voiceprint/ecapa/sdk
+
+# ── InsightFace local face engine ──
+insightface
+opencv-python>=4.10
+
+# ── Test client (optional, install with INSTALL_CLIENT=1 bash deploy/deploy.sh) ──
+# pyaudio>=0.2
+# scipy>=1.14

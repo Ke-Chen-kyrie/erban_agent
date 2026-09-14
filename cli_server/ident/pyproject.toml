@@ -1,0 +1,8 @@
+[project]
+name = "ident"
+version = "0.1.0"
+requires-python = ">=3.13"
+dependencies = ["robot-common", "identification-client", "httpx"]
+
+[project.scripts]
+ident = "ident:main"

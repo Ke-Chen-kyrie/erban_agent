@@ -1,0 +1,20 @@
+services:
+  robot-api:
+    build:
+      context: ..
+      dockerfile: server/Dockerfile
+      network: host
+    network_mode: host
+    read_only: true
+    tmpfs:
+      - /tmp
+    env_file:
+      - ../.env
+    environment:
+      - TZ=Asia/Shanghai
+      - HTTP_PROXY=
+      - HTTPS_PROXY=
+      - http_proxy=
+      - https_proxy=
+      - no_proxy=*
+    restart: unless-stopped

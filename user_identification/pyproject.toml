@@ -1,0 +1,5 @@
+[project]
+name = "user-identification"
+version = "0.1.0"
+description = "User Identification Service — face and voice biometric authentication"
+requires-python = ">=3.10"

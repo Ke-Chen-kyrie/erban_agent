@@ -1,0 +1,10 @@
+[project]
+name = "food"
+version = "0.1.0"
+requires-python = ">=3.13"
+dependencies = ["robot-common"]
+
+[project.scripts]
+scoop = "food:scoop_main"
+deliver-spoon = "food:deliver_spoon_main"
+retract-spoon = "food:retract_spoon_main"
