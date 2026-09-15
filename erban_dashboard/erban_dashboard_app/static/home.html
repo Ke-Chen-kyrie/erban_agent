@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>迩伴Agent · 功能首页</title>
+  <style>
+    :root { color-scheme: light; --bg: #ffffff; --surface: #ffffff; --line: rgba(0,76,131,.16); --text: #004c83; --soft: #3a6d92; --muted: #52708a; --accent: #fe6100; --accent-soft: rgba(254,97,0,.1); --shadow: 0 18px 50px rgba(0,76,131,.12); }
+    * { box-sizing: border-box; }
+    html, body { min-height: 100%; }
+    body { margin: 0; font-family: Inter, "PingFang SC", "Microsoft YaHei", system-ui, sans-serif; color: var(--text); background: var(--bg); }
+    body::before { content: ""; position: fixed; inset: 0; z-index: -1; background: url("/static/hero-bg.jpg") center top / cover no-repeat; }
+    button { font: inherit; }
+    .page { position: relative; z-index: 1; display: grid; min-height: 100vh; grid-template-rows: auto 1fr; }
+    .home { width: min(1160px, calc(100% - 48px)); margin: 0 auto; padding: 42px 0 54px; }
+    .cards { align-self: end; margin-top: 40vh; }
+
+    .hero { display: flex; align-items: flex-start; justify-content: space-between; gap: 28px; margin-bottom: 30px; }
+    .brand { display: flex; align-items: center; gap: 18px; color: inherit; }
+    .brand-mark { display: grid; place-items: center; width: 62px; height: 62px; border: 1px solid rgba(0,76,131,.25); border-radius: 18px; color: var(--surface); background: linear-gradient(145deg, #0b64a5, var(--text)); box-shadow: 0 8px 22px rgba(0,76,131,.25); }
+    .brand-mark svg { width: 34px; height: 34px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+    .brand-name { margin: 0; color: var(--text); font-size: clamp(28px, 4vw, 42px); font-weight: 780; letter-spacing: .04em; }
+    .brand-subtitle { margin-top: 5px; color: var(--soft); font-size: 15px; letter-spacing: .16em; }
+    .actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .tool-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 42px; padding: 0 15px; border: 1px solid var(--line); border-radius: 12px; color: var(--text); background: rgba(255,255,255,.85); text-decoration: none; cursor: pointer; transition: .18s ease; }
+    .tool-btn:hover { border-color: rgba(0,76,131,.45); background: #fff; }
+    .tool-btn:focus-visible, .card:focus-visible { outline: 3px solid rgba(254,97,0,.55); outline-offset: 3px; }
+    .tool-btn svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    .tool-btn .exit-icon { display: none; }
+    :fullscreen .tool-btn .enter-icon { display: none; }
+    :fullscreen .tool-btn .exit-icon { display: block; }
+    .cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
+    .card { display: flex; flex-direction: column; min-height: 292px; padding: 26px; border: 1px solid var(--line); border-radius: 18px; color: inherit; background: rgba(255,255,255,.92); box-shadow: inset 0 1px rgba(255,255,255,.6), var(--shadow); text-decoration: none; transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease; }
+    .card:hover { transform: translateY(-5px); border-color: rgba(254,97,0,.45); box-shadow: inset 0 1px rgba(255,255,255,.6), 0 22px 56px rgba(254,97,0,.16); }
+    .icon { display: grid; place-items: center; width: 54px; height: 54px; border: 1px solid rgba(254,97,0,.3); border-radius: 15px; color: var(--accent); background: var(--accent-soft); }
+    .icon svg { width: 29px; height: 29px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+    h2 { margin: 25px 0 10px; font-size: 21px; }
+    .card p { margin: 0; color: var(--soft); font-size: 14px; line-height: 1.65; }
+    .enter { display: inline-flex; align-items: center; gap: 8px; margin-top: auto; padding-top: 26px; color: var(--accent); font-size: 13px; font-weight: 700; }
+    .enter svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    .workspace { display: none; min-height: 100vh; grid-template-rows: 68px minmax(0, 1fr); padding: 0 18px 18px; }
+    body.feature-open { overflow: hidden; }
+    body.feature-open .home { display: none; }
+    body.feature-open .workspace { display: grid; }
+    .workspace-bar { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-width: 0; }
+    .workspace-brand { display: flex; align-items: center; gap: 11px; min-width: 0; }
+    .workspace-brand .brand-mark { width: 42px; height: 42px; border-radius: 13px; }
+    .workspace-brand .brand-mark svg { width: 23px; height: 23px; }
+    .workspace-title { min-width: 0; }
+    .workspace-title strong { display: block; overflow: hidden; font-size: 17px; text-overflow: ellipsis; white-space: nowrap; }
+    .workspace-title span { display: block; margin-top: 2px; color: var(--muted); font-size: 10px; letter-spacing: .16em; }
+    .frame-wrap { min-height: 0; overflow: hidden; border: 1px solid var(--line); border-radius: 18px; background: var(--surface); box-shadow: var(--shadow); }
+    #featureFrame { display: block; width: 100%; height: 100%; border: 0; background: var(--bg); }
+    @media (max-width: 860px) { .hero { flex-direction: column; } .cards { grid-template-columns: 1fr; } .card { min-height: 230px; } }
+    @media (max-width: 600px) { .home { width: min(100% - 28px, 540px); padding: 28px 0; } .brand { gap: 13px; } .brand-mark { width: 52px; height: 52px; border-radius: 16px; } .brand-mark svg { width: 29px; height: 29px; } .workspace { padding: 0 10px 10px; grid-template-rows: auto minmax(0, 1fr); } .workspace-bar { align-items: stretch; flex-direction: column; padding: 12px 0; } .actions { justify-content: flex-start; } }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <main class="home" id="homeView">
+      <section class="hero">
+        <div>
+          <div class="brand">
+            <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3 4.5 6v5.3c0 4.6 3 7.7 7.5 9.7 4.5-2 7.5-5.1 7.5-9.7V6L12 3Z"/><path d="M8.5 12h2l1.2-2.6 1.5 5 1.1-2.4h1.5"/></svg></span>
+            <span><strong class="brand-name">迩伴Agent</strong><span class="brand-subtitle">坚持热爱　追求卓越</span></span>
+          </div>
+        </div>
+        <div class="actions">
+          <button class="tool-btn" id="fullscreenToggle" type="button" title="进入全屏" aria-label="进入全屏">
+            <svg class="enter-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H3v5M16 3h5v5M8 21H3v-5M16 21h5v-5"/></svg>
+            <svg class="exit-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8h5V3M21 8h-5V3M3 16h5v5M21 16h-5v5"/></svg>
+            <span id="fullscreenText">全屏</span>
+          </button>
+        </div>
+      </section>
+      <section class="cards" aria-label="功能入口">
+        <a class="card" href="/register" data-path="/register" data-title="用户注册"><span class="icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3"/><path d="M3.5 19c.4-4 2.2-6 5.5-6 1.6 0 2.9.5 3.8 1.5M17 11v6M14 14h6"/></svg></span><h2>用户注册</h2><p>采集用户资料、人脸照片和语音信息，建立可识别的照护档案。</p><span class="enter">进入用户注册 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 14 0M13 6l6 6-6 6"/></svg></span></a>
+        <a class="card" href="/users" data-path="/users" data-title="用户管理"><span class="icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="8" cy="8" r="3"/><path d="M2.8 19c.4-4 2.1-6 5.2-6s4.8 2 5.2 6M16 7h5M16 12h5M16 17h5"/></svg></span><h2>用户管理</h2><p>查看、检索和维护已登记用户的身份信息与识别资料。</p><span class="enter">进入用户管理 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 14 0M13 6l6 6-6 6"/></svg></span></a>
+        <a class="card" href="/dashboard" data-path="/dashboard" data-title="小伴agent"><span class="icon robot-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4V2M10 2h4"/><rect x="4" y="5" width="16" height="13" rx="4"/><circle cx="9" cy="11" r="1"/><circle cx="15" cy="11" r="1"/><path d="M9 15h6M8 18v3M16 18v3M4 10H2v4h2M20 10h2v4h-2"/></svg></span><h2>小伴agent</h2><p>查看摄像头实时画面，实时感知异常事件并推送 Agent 主动对话，同时可一键启停检测与 Agent 服务。</p><span class="enter">进入小伴agent <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 14 0M13 6l6 6-6 6"/></svg></span></a>
+      </section>
+    </main>
+
+    <section class="workspace" id="workspaceView" aria-label="功能工作区">
+      <header class="workspace-bar">
+        <div class="workspace-brand">
+          <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3 4.5 6v5.3c0 4.6 3 7.7 7.5 9.7 4.5-2 7.5-5.1 7.5-9.7V6L12 3Z"/><path d="M8.5 12h2l1.2-2.6 1.5 5 1.1-2.4h1.5"/></svg></span>
+          <span class="workspace-title"><strong id="featureTitle">功能</strong><span>迩伴Agent</span></span>
+        </div>
+        <div class="actions">
+          <button class="tool-btn" id="homeButton" type="button">返回首页</button>
+          <button class="tool-btn" id="workspaceFullscreenToggle" type="button" title="进入全屏" aria-label="进入全屏">
+            <svg class="enter-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H3v5M16 3h5v5M8 21H3v-5M16 21h5v-5"/></svg>
+            <svg class="exit-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8h5V3M21 8h-5V3M3 16h5v5M21 16h-5v5"/></svg>
+            <span id="workspaceFullscreenText">全屏</span>
+          </button>
+        </div>
+      </header>
+      <div class="frame-wrap"><iframe id="featureFrame" title="功能页面"></iframe></div>
+    </section>
+  </div>
+
+  <script>
+    const $ = id => document.getElementById(id);
+    const fullscreenButtons = [$("fullscreenToggle"), $("workspaceFullscreenToggle")];
+    const fullscreenTexts = [$("fullscreenText"), $("workspaceFullscreenText")];
+
+    function fullscreenElement() { return document.fullscreenElement || document.webkitFullscreenElement; }
+    function syncFullscreenButton() {
+      const active = Boolean(fullscreenElement());
+      fullscreenTexts.forEach(item => { item.textContent = active ? "退出全屏" : "全屏"; });
+      fullscreenButtons.forEach(button => {
+        button.title = active ? "退出全屏（Esc）" : "进入全屏";
+        button.setAttribute("aria-label", active ? "退出全屏" : "进入全屏");
+      });
+    }
+    async function toggleFullscreen() {
+      try {
+        if (fullscreenElement()) {
+          const exit = document.exitFullscreen || document.webkitExitFullscreen;
+          if (exit) await exit.call(document);
+        } else {
+          const enter = document.documentElement.requestFullscreen || document.documentElement.webkitRequestFullscreen;
+          if (enter) await enter.call(document.documentElement);
+        }
+      } catch (error) { console.warn("无法切换全屏模式", error); }
+    }
+    function embeddedUrl(path) {
+      const separator = path.includes("?") ? "&" : "?";
+      return `${path}${separator}embed=1`;
+    }
+    function loadFeature(path, title) {
+      $("featureTitle").textContent = title;
+      $("featureFrame").src = embeddedUrl(path);
+      document.body.classList.add("feature-open");
+      history.replaceState({ path, title }, "", "/");
+    }
+    function returnHome() {
+      $("featureFrame").removeAttribute("src");
+      document.body.classList.remove("feature-open");
+      history.replaceState({}, "", "/");
+    }
+
+    fullscreenButtons.forEach(button => button.addEventListener("click", toggleFullscreen));
+    document.addEventListener("fullscreenchange", syncFullscreenButton);
+    document.addEventListener("webkitfullscreenchange", syncFullscreenButton);
+    document.querySelectorAll(".card[data-path]").forEach(card => {
+      card.addEventListener("click", event => {
+        event.preventDefault();
+        loadFeature(card.dataset.path, card.dataset.title);
+      });
+    });
+    $("homeButton").addEventListener("click", returnHome);
+    syncFullscreenButton();
+  </script>
+</body>
+</html>

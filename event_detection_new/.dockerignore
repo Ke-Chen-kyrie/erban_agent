@@ -1,0 +1,29 @@
+# Local caches / virtualenvs — never bake into the image
+.venv/
+**/.venv/
+.uv-cache/
+__pycache__/
+*.pyc
+.idea/
+.pytest_cache/
+.codegraph/
+.omo/
+.claude/
+*.egg-info/
+
+# Secrets: injected at runtime via docker-compose `env_file: .env`
+.env
+.env.local
+
+# Runtime data — mounted as volumes instead
+logs/
+result/
+*.log
+
+# Source control / tooling / docs
+.git/
+.gitignore
+CLAUDE.md
+
+# Tests are not needed at runtime
+tests/

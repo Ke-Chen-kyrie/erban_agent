@@ -1,0 +1,5 @@
+[project]
+name = "dummy-proc"
+version = "0.0.1"
+description = "Fixture for dashboard process-launch tests"
+requires-python = ">=3.10"

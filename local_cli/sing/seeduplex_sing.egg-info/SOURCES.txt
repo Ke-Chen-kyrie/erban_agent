@@ -1,0 +1,9 @@
+README.md
+pyproject.toml
+sing_tool.py
+seeduplex_sing.egg-info/PKG-INFO
+seeduplex_sing.egg-info/SOURCES.txt
+seeduplex_sing.egg-info/dependency_links.txt
+seeduplex_sing.egg-info/entry_points.txt
+seeduplex_sing.egg-info/requires.txt
+seeduplex_sing.egg-info/top_level.txt

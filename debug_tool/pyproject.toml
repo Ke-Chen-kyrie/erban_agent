@@ -1,0 +1,23 @@
+[project]
+name = "user-identification-desktop-user-friendly"
+version = "0.1.0"
+description = "User-friendly Qt desktop workstation for face and voice identity recognition."
+requires-python = ">=3.10,<3.14"
+dependencies = [
+  "PySide6>=6.8,<6.9",
+  "opencv-python>=4.10",
+  "numpy>=1.26",
+  "requests>=2.32",
+  "sounddevice>=0.4",
+  "websockets>=16.0",
+  "rosbags>=0.11",
+  "python-dotenv>=1.0",
+  "pyyaml>=6.0",
+  "pyinstaller>=6.0",
+]
+
+[tool.uv]
+package = false
+
+[tool.pyinstaller]
+name = "UserIdentificationUserFriendly"

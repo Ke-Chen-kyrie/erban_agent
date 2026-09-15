@@ -1,25 +1,40 @@
-# --- 虚拟环境(大,不入库)---
+# --- 凭据 / 密钥(绝不入库;.env.example 占位模板保留)---
+.env
+
+# --- 虚拟环境 / 依赖安装 ---
 .venv/
 venv/
+node_modules/
 
-# --- 模型权重 / 声纹 / 人脸 ---
-**/models/
-**/face_detected_model/
-**/voiceprint/
+# --- 编译产物 / 预发布二进制 ---
+debug_tool/release/
 
-# --- 数据 / 输出 / 日志 ---
-**/data/
-**/result/
-**/video_segments/
-**/debug_files/
-**/certs/
+# --- 数据 / 模型权重 / 数据库 ---
+data/
+models/
+face_detected_model/
+voiceprint/
+result/
+debug_files/
+logs/
+certs/
+*.db
+*.sqlite
+*.sqlite3
 
-# --- 二进制 / 媒体 / 打包文件 ---
+# --- 缓存 ---
+__pycache__/
+*.py[cod]
+.DS_Store
+*.log
+
+# --- 权重 / 二进制 / 媒体文件 ---
+*.pth
+*.pt
+*.pth.tar
 *.onnx
 *.whl
 *.bin
-*.pt
-*.pth
 *.pkl
 *.npy
 *.npz
@@ -33,20 +48,8 @@ venv/
 *.mp4
 *.avi
 *.wav
+*.mp3
+*.pcm
 *.png
 *.jpg
 *.jpeg
-*.mp3
-*.pcm
-
-# --- 编辑器 / 缓存 / 本地 ---
-.idea/
-.claude/
-__pycache__/
-*.py[cod]
-.DS_Store
-*.log
-
-# --- 凭据 / 密钥(绝不入库)===
-# 精确名 .env = 真实密钥,直接排除;保留 .env.example(占位模板)
-.env

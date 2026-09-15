@@ -1,0 +1,367 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+elder-music —— 适老版音乐播放 CLI（可移植：Linux x86_64 / arm64 / armv7）
+
+按歌名搜索 → 自动挑选「适老」版本（排除 DJ/舞曲/翻唱…，优先正规院团/歌唱家）→ 播放。
+扬声器由用户自行配置（None=系统默认，或按名字动态解析，不写死任何机器路径）。
+
+子命令:
+  elder-music init                  生成默认配置文件
+  elder-music search "<歌名>"       搜索并列出「适老」候选（--json 供程序调用）
+  elder-music play   "<歌名>"       搜索 → 筛适老 → 取最佳 → 播放（--json）
+  elder-music speakers              列出本机可用扬声器（供填 SPEAKER_DEVICE_NAME）
+  elder-music set-speaker <值>      设置扬声器并应用（None / 子串 / 精确设备名）
+  elder-music apply                 按配置应用扬声器（写 mpv.conf + 重启播放服务）
+  elder-music config                显示当前配置
+
+配置: ~/.config/elder-music/config.env   （KEY=VALUE，含适老过滤规则）
+依赖: ncm-cli(已登录) + mpv
+"""
+import argparse
+import json
+import os
+import re
+import shutil
+import signal
+import subprocess
+import sys
+
+CFG_DIR = os.path.expanduser("~/.config/elder-music")
+CFG_FILE = os.path.join(CFG_DIR, "config.env")
+MPV_HOME = os.path.join(CFG_DIR, "mpv-home")
+MPV_CONF = os.path.join(MPV_HOME, "mpv.conf")
+NCM_DIR = os.path.expanduser("~/.config/ncm-cli")
+DAEMON_PID = os.path.join(NCM_DIR, "daemon.pid")
+
+DEFAULTS = {
+    "ELDER_EXCLUDE": ("DJ,舞曲,电音,电摇,慢摇,抖音,广场舞,伦巴,恰恰,加快,加速,减速,"
+                      "烟嗓,串烧,片段,铃声,车载,酒吧,蹦迪,翻唱,cover,伴奏,纯音乐,纯享,改版,"
+                      "0.8,0.9,1.1,1.2,1.5"),
+    "ELDER_PREFER": ("中央乐团,中国交响乐团,中央广播,解放军,军乐团,歌舞团,合唱团,交响,"
+                     "北京市少年宫,中国广播,国家,韩红,王菲,廖昌永,德德玛,毛宁,张也,谭晶,"
+                     "王晰,那英,吴雁泽,狼戈,小曾,阿鲁阿卓,王增亮,王泓翔,邓丽君,李谷一,"
+                     "殷秀梅,阎维文,宋祖英,才旦卓玛,胡松华,郭兰英,汪明荃"),
+    "ELDER_LIMIT": "50",
+    "SPEAKER_DEVICE_NAME": "None",
+}
+
+TEMPLATE = """\
+# ============ 适老过滤规则（逗号分隔，可自由增删） ============
+# 排除：命中即丢弃（DJ/改编/不适老版本）
+ELDER_EXCLUDE={exclude}
+# 优先：命中加分（正规院团/知名歌唱家）
+ELDER_PREFER={prefer}
+# 每次搜索取多少条
+ELDER_LIMIT={limit}
+
+# ============ 扬声器配置 ============
+# None        = 跟随系统默认输出
+# <子串>      = 唯一匹配的设备（如 USB、HDMI、Analog、card 名）；多个匹配会报错并列出
+# <精确设备名>= mpv 的设备名（用 `elder-music speakers` 查看）
+SPEAKER_DEVICE_NAME={speaker}
+"""
+
+
+# ---------------------------------------------------------------- 基础设施
+def die(msg, code=1):
+    print("❌ " + msg, file=sys.stderr)
+    sys.exit(code)
+
+
+def need(tool):
+    p = shutil.which(tool)
+    if not p:
+        die(f"找不到 `{tool}`，请先安装并确保在 PATH 中")
+    return p
+
+
+def run(cmd, env=None):
+    r = subprocess.run(cmd, capture_output=True, text=True, env=env)
+    return r.returncode, r.stdout, r.stderr
+
+
+def read_cfg():
+    cfg = dict(DEFAULTS)
+    if os.path.exists(CFG_FILE):
+        with open(CFG_FILE, encoding="utf-8") as f:
+            for line in f:
+                s = line.strip()
+                if not s or s.startswith("#") or "=" not in s:
+                    continue
+                k, v = s.split("=", 1)
+                cfg[k.strip()] = v.strip().strip('"').strip("'")
+    return cfg
+
+
+def write_cfg(cfg):
+    os.makedirs(CFG_DIR, exist_ok=True)
+    with open(CFG_FILE, "w", encoding="utf-8") as f:
+        f.write(TEMPLATE.format(
+            exclude=cfg["ELDER_EXCLUDE"], prefer=cfg["ELDER_PREFER"],
+            limit=cfg["ELDER_LIMIT"], speaker=cfg["SPEAKER_DEVICE_NAME"]))
+
+
+def as_list(s):
+    return [x.strip() for x in re.split(r"[,，]", s or "") if x.strip()]
+
+
+# ---------------------------------------------------------------- 搜索 / 适老筛选
+def normalize(s):
+    return re.sub(r"\s+", "", s or "")
+
+
+def ncm_search(keyword, limit):
+    need("ncm-cli")
+    rc, out, err = run(["ncm-cli", "search", "song", "--keyword", keyword,
+                        "--limit", str(limit), "--output", "json"])
+    if rc != 0:
+        die(f"ncm-cli 搜索失败: {(err or out).strip()}")
+    try:
+        return (json.loads(out).get("data") or {}).get("records") or []
+    except Exception:
+        die("ncm-cli 返回的不是合法 JSON")
+
+
+def artist_of(rec):
+    names = [a.get("name", "") for a in rec.get("artists", []) if a.get("name")]
+    return "/".join(names)
+
+
+def rank_candidates(keyword, records, cfg):
+    """返回按适老优先度排序的候选列表。"""
+    excl = as_list(cfg["ELDER_EXCLUDE"])
+    pref = as_list(cfg["ELDER_PREFER"])
+    kw = normalize(keyword)
+
+    def has(text, words):
+        low = text.lower()
+        return any(w.lower() in low for w in words)
+
+    out = []
+    for r in records:
+        if not r.get("visible"):
+            continue
+        name = r.get("name", "")
+        artist = artist_of(r)
+        if kw not in normalize(name):            # 歌名必须匹配关键词
+            continue
+        if has(name, excl):                       # 排除 DJ/翻唱/伴奏…
+            continue
+        dur = r.get("duration", 0) or 0
+        br = r.get("maxBrLevel", "") or ""
+        score = 0
+        if has(name, pref) or has(artist, pref):
+            score += 1000
+        score += min(dur, 300000) / 1000.0        # 偏好完整时长
+        score += 200 if br in ("lossless", "hires") else (80 if br == "exhigh" else 0)
+        out.append({
+            "score": round(score, 1), "name": name, "artist": artist,
+            "originalId": r.get("originalId"), "encryptedId": r.get("id"),
+            "duration": dur, "brLevel": br,
+            "link": f"https://music.163.com/#/song?id={r.get('originalId')}",
+        })
+    out.sort(key=lambda x: x["score"], reverse=True)
+    return out
+
+
+# ---------------------------------------------------------------- 扬声器（可移植解析）
+def mpv_devices():
+    need("mpv")
+    rc, out, _ = run(["mpv", "--audio-device=help"])
+    devs = []
+    for line in out.splitlines():
+        m = re.match(r"\s*'([^']+)'\s*\((.*)\)\s*$", line)
+        if m:
+            devs.append((m.group(1), m.group(2)))
+    return devs
+
+
+def resolve_speaker(value, devs):
+    """None/空→auto；精确名→原样；否则唯一子串匹配（多个则优先 pipewire/analog）。"""
+    if not value or value.strip().lower() in ("none", "default", "系统默认", ""):
+        return "auto", None
+    for d, _ in devs:
+        if d == value:
+            return d, None
+    key = value.lower()
+    matches = [(d, desc) for d, desc in devs if key in d.lower() or key in desc.lower()]
+    if not matches:
+        return None, f"没有匹配 “{value}” 的设备"
+    if len(matches) == 1:
+        return matches[0][0], None
+    pool = [m for m in matches if "analog" in m[1].lower()] or matches
+    pw = [d for d, _ in pool if d.startswith("pipewire/")]
+    chosen = pw[0] if pw else pool[0][0]
+    return chosen, f"“{value}” 匹配到 {len(matches)} 个设备，已选 {chosen}（建议用更精确的值）"
+
+
+def daemon_pid():
+    try:
+        return int(open(DAEMON_PID).read().strip())
+    except Exception:
+        return None
+
+
+def daemon_mpv_home(pid):
+    try:
+        with open(f"/proc/{pid}/environ", "rb") as f:
+            for e in f.read().split(b"\0"):
+                if e.startswith(b"MPV_HOME="):
+                    return e.decode().split("=", 1)[1]
+    except Exception:
+        pass
+    return None
+
+
+def restart_player():
+    pid = daemon_pid()
+    if pid:
+        try:
+            os.kill(pid, signal.SIGTERM)
+        except Exception:
+            pass
+    run(["pkill", "-x", "mpv"])
+
+
+def apply_speaker(cfg, quiet=False):
+    """把 SPEAKER_DEVICE_NAME 解析为 mpv 设备并写入 mpv.conf，必要时重启播放服务。"""
+    dev, warn = resolve_speaker(cfg["SPEAKER_DEVICE_NAME"], mpv_devices())
+    if dev is None:
+        die(warn)
+    os.makedirs(MPV_HOME, exist_ok=True)
+    with open(MPV_CONF, "w", encoding="utf-8") as f:
+        f.write("# 由 elder-music 生成\n")
+        f.write(f"audio-device={dev}\n")
+    if not quiet:
+        print(f"🔊 扬声器: {cfg['SPEAKER_DEVICE_NAME']!r} → {dev}")
+        if warn:
+            print("⚠️  " + warn)
+    # 让已运行的 daemon 使用该 MPV_HOME（否则 mpv 读不到 mpv.conf）
+    pid = daemon_pid()
+    if pid and daemon_mpv_home(pid) != MPV_HOME:
+        restart_player()
+        if not quiet:
+            print("♻️  已重启播放服务以生效")
+    return dev
+
+
+# ---------------------------------------------------------------- 子命令
+def cmd_init(_):
+    if os.path.exists(CFG_FILE):
+        print(f"配置已存在: {CFG_FILE}")
+    else:
+        write_cfg(DEFAULTS)
+        print(f"✅ 已生成默认配置: {CFG_FILE}")
+    print("接下来: 编辑该文件设 SPEAKER_DEVICE_NAME（或用 `elder-music speakers` 查看后 `set-speaker`）")
+
+
+def cmd_config(_):
+    cfg = read_cfg()
+    print(f"配置文件: {CFG_FILE}\n")
+    print(f"排除词: {cfg['ELDER_EXCLUDE']}")
+    print(f"优先词: {cfg['ELDER_PREFER']}")
+    print(f"搜索条数: {cfg['ELDER_LIMIT']}")
+    print(f"扬声器: {cfg['SPEAKER_DEVICE_NAME']}")
+
+
+def cmd_speakers(_):
+    devs = mpv_devices()
+    if not devs:
+        die("mpv 未列出任何设备（检查 mpv 是否安装）")
+    print("可用扬声器（把想要的值填到 SPEAKER_DEVICE_NAME，或用 set-speaker）:\n")
+    for d, desc in devs:
+        print(f"  {d}\n      {desc}")
+
+
+def cmd_search(args):
+    cfg = read_cfg()
+    recs = ncm_search(args.name, int(cfg["ELDER_LIMIT"]))
+    cands = rank_candidates(args.name, recs, cfg)
+    if args.limit:
+        cands = cands[:args.limit]
+    if args.json:
+        print(json.dumps(cands, ensure_ascii=False, indent=2))
+        return
+    if not cands:
+        print(f"没有找到 “{args.name}” 的适老可播版本（可能无音源或有版权限制）")
+        return
+    print(f"“{args.name}” 的适老候选（共 {len(cands)}）:\n")
+    for i, c in enumerate(cands[:10], 1):
+        print(f"{i:>2}. {c['name']} - {c['artist']}")
+        print(f"    评分 {c['score']} | {c['brLevel']} | {c['link']}")
+
+
+def cmd_play(args):
+    cfg = read_cfg()
+    recs = ncm_search(args.name, int(cfg["ELDER_LIMIT"]))
+    cands = rank_candidates(args.name, recs, cfg)
+    if not cands:
+        die(f"没有找到 “{args.name}” 的适老可播版本")
+    pick = cands[0]
+    if not args.json:
+        print(f"🎵 选中: {pick['name']} - {pick['artist']}  (评分 {pick['score']})")
+    apply_speaker(cfg, quiet=args.json)
+    env = dict(os.environ, MPV_HOME=MPV_HOME)
+    need("ncm-cli")
+    rc, out, err = run(["ncm-cli", "play", "--song",
+                        "--encrypted-id", pick["encryptedId"],
+                        "--original-id", str(pick["originalId"])], env=env)
+    # 注意: 刚重启 daemon 时 ncm-cli 会 rc=0 但 stdout 为空，故只看返回码
+    ok = rc == 0
+    if args.json:
+        print(json.dumps({"ok": ok, "picked": pick,
+                          "output": (out or err).strip()}, ensure_ascii=False))
+        return
+    if ok:
+        print(f"▶️  正在播放 | {pick['link']}")
+    else:
+        die(f"播放失败: {(err or out).strip()}")
+
+
+def cmd_set_speaker(args):
+    cfg = read_cfg()
+    cfg["SPEAKER_DEVICE_NAME"] = args.value
+    write_cfg(cfg)
+    apply_speaker(cfg)
+
+
+def cmd_apply(_):
+    apply_speaker(read_cfg())
+
+
+def main():
+    p = argparse.ArgumentParser(prog="elder-music", description="适老版音乐播放 CLI")
+    sub = p.add_subparsers(dest="cmd")
+
+    sub.add_parser("init", help="生成默认配置")
+    sub.add_parser("config", help="显示当前配置")
+    sub.add_parser("speakers", help="列出本机可用扬声器")
+    sub.add_parser("apply", help="按配置应用扬声器")
+
+    sp = sub.add_parser("search", help="搜索并列出适老候选"); sp.add_argument("name")
+    sp.add_argument("--json", action="store_true"); sp.add_argument("--limit", type=int)
+    sp.set_defaults(func=cmd_search)
+
+    pp = sub.add_parser("play", help="搜索→筛适老→取最佳→播放"); pp.add_argument("name")
+    pp.add_argument("--json", action="store_true")
+    pp.set_defaults(func=cmd_play)
+
+    ss = sub.add_parser("set-speaker", help="设置扬声器并应用"); ss.add_argument("value")
+    ss.set_defaults(func=cmd_set_speaker)
+
+    sub.choices["init"].set_defaults(func=cmd_init)
+    sub.choices["config"].set_defaults(func=cmd_config)
+    sub.choices["speakers"].set_defaults(func=cmd_speakers)
+    sub.choices["apply"].set_defaults(func=cmd_apply)
+
+    args = p.parse_args()
+    if not getattr(args, "func", None):
+        p.print_help(); return
+    if not os.path.exists(CFG_FILE) and args.cmd not in ("init",):
+        write_cfg(DEFAULTS)
+    args.func(args)
+
+
+if __name__ == "__main__":
+    main()

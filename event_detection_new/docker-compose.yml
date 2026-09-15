@@ -1,0 +1,44 @@
+# 事件检测容器编排。大屏页面（erban_dashboard）与 Agent 不在此容器内，运行在宿主机。
+#
+# 关键设计（与需求约定一致）：
+#   - network_mode: host  容器共享宿主机网络，.env 里的 127.0.0.1 推送目标
+#                          （大屏 8770、Agent 8769）以及 rosbridge/Foxglove 地址原样可达。
+#   - 不设置 restart      「不用开机自启」：容器默认处于停止状态，由大屏「一键启动/停止」
+#                          通过 docker start / docker stop 控制生命周期。
+#   - env_file: .env      密钥不烧进镜像，运行时注入（镜像 .dockerignore 已排除 .env）。
+#   - volumes             日志与预测结果落在宿主机，容器重建不丢失。
+#
+# 首次创建容器（镜像构建 + 创建但保持停止，之后交给大屏按钮）：
+#   bash deploy/docker-deploy.sh
+# 也可以直接使用本文件（构建并启动）：
+#   docker compose up -d --build
+services:
+  event-detection:
+    build:
+      context: .
+    image: event-detection:latest
+    container_name: event-detection
+    network_mode: host
+    env_file:
+      - .env
+    volumes:
+      - ./logs:/app/logs
+      - ./result:/app/result
+      - ./certs:/app/certs
+    # 本地 USB/板载摄像头（VIDEO_SOURCE=camera）时必须把设备映射进容器，
+    # 否则容器内 VideoCapture(0) 打不开 /dev/video0，进程会直接退出。
+    # CAMERA_ID=0 对应 /dev/video0；摄像头节点不止一个时按需多列几行。
+
+  agent-monitor-server:
+    image: event-detection:latest
+    container_name: agent-monitor-server
+    network_mode: host
+    env_file:
+      - .env
+    command: ["/app/.venv/bin/python", "-m", "agent_monitor_server"]
+    volumes:
+      - ./logs:/app/logs
+      - ./result:/app/result
+      - ./certs:/app/certs
+    # VIDEO_SOURCE=camera 时也需要映射摄像头。多数 USB 摄像头不能被两个
+    # 容器同时打开；固定事件检测与临时监测同时运行时推荐使用 Zenoh/Foxglove。

@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "seeduplex-sing"
+version = "0.2.0"
+description = "豆包实时语音模型 3.0（Seeduplex）唱歌工具 CLI"
+requires-python = ">=3.10"
+dependencies = [
+    "websockets>=11.0.3",
+    "tomli>=2.0.1; python_version < '3.11'",
+    "numpy>=1.26",
+    "sounddevice>=0.5",
+    "scipy>=1.13",
+]
+
+[project.scripts]
+sing = "sing_tool:main"
+
+[tool.setuptools]
+py-modules = ["sing_tool"]

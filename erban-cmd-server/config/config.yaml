@@ -1,0 +1,70 @@
+# 外部配置 改动需重启
+
+robot: # 机器人 WebSocket 地址
+  host: 192.168.217.253
+  port: 9092
+  timeout: 180.0
+
+web: # 外部网络服务端点 (搜索/天气/时间用; 密钥走同目录 .env, 不进此文件)
+  iqs_endpoint: https://cloud-iqs.aliyuncs.com/search/unified
+
+ident: # 人脸识别依赖端点
+  camera_ws_url: ws://192.168.217.100:8768
+  camera_topic: /zj_humanoid/sensor/realsense_head/color/image_raw/compressed
+  identification_url: http://192.168.217.100:8001
+  joint_url: http://192.168.217.100:8002 # 关节聚焦服务
+
+emote: # 表情播放 rosbridge 端点
+  host: 192.168.217.100
+  port: 9090
+
+navigation: # 导航站位 (navigate 用; robot_client 运行时读取)
+  standoff_distance: 0.6 # 导航到目标用户前方时的默认站位距离 (米; 地点列表由机器人端持有, 见 map-locations 命令)
+
+# 自身配置 缺失拒启 改动需重启
+
+server: # cmd_server 自身监听端口 (host 网络下即宿主端口, 由 entrypoint 读)
+  port: 8088
+
+allow_ips: # 全接口来源白名单; 缺省=全拒
+  - 127.0.0.1 # localhost
+  - 192.168.217.100 # 单 IP
+  - 192.168.217.0/24 # 网段 (按需打开)
+
+exclude_scan_paths: # scan 排除路径, 相对 runtime/
+  - examples # 示例功能, 格式示范用, 不注册进命令
+
+system_commands: # 基础 shell 工具白名单, 非机器人命令
+  - ls
+  - cat
+  - echo
+  - pwd
+  - date
+  - head
+  - tail
+  - grep
+  - find
+  - wc
+  - sort
+  - uniq
+  - cut
+  - tr
+  - basename
+  - dirname
+  - whoami
+  - hostname
+  - uname
+  - df
+  - du
+  - free
+  - which
+  - type
+  - seq
+  - base64
+  - sleep
+  - gzip
+  - gunzip
+  - tar
+
+catalog: # /catalog 页允许测试命令的开关 (宁拒勿放, 默认关; 开=页面出现发送命令 UI)
+  enable_test: true

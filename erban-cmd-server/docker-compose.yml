@@ -1,0 +1,23 @@
+services:
+  cmd-server:
+    container_name: erban-cmd-server   # 固定名 = 单实例: 重复 up 报冲突, 不允许多容器
+    image: erban-cmd-server:latest   # 有就用, 没有退回 build
+    build:
+      context: .
+      network: host   # build 期 RUN 走宿主网络: 容器自带 DNS 源在此网不通, 宿主 DNS 已验证可用
+    network_mode: host   # 端口即宿主端口, 由 config.yaml server.port 领 (改端口不重建)
+    environment:
+      - CMD_CONFIG=/config
+      - CMD_RUNTIME=/runtime
+      - CMD_BIN=/usr/local/bin
+    volumes:
+      - ./config:/config
+      - ./runtime:/runtime
+      - ./entrypoint.sh:/entrypoint.sh
+    entrypoint: ["/bin/sh", "/entrypoint.sh"]
+    restart: unless-stopped
+
+# 构建机运行
+# docker save -o erban-cmd-server.tar erban-cmd-server:latest
+# 挪到同架构目标机后
+# docker load -i erban-cmd-server.tar

@@ -1,0 +1,11 @@
+[project]
+name = "cmd-server"
+version = "0.1.0"
+description = "cmd_server 命令执行服务 (FastAPI)"
+requires-python = ">=3.11"
+
+[project.scripts]
+cmd-server = "cmd_server.main:run"
+
+[tool.setuptools.packages.find]
+include = ["cmd_server*"]

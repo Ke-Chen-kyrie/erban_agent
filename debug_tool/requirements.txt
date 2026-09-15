@@ -1,0 +1,9 @@
+PySide6>=6.8,<6.9
+opencv-python>=4.10
+numpy>=1.26
+requests>=2.32
+sounddevice>=0.4
+websockets>=16.0
+rosbags>=0.11
+python-dotenv>=1.0
+pyinstaller>=6.0

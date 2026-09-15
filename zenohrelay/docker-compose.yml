@@ -1,0 +1,16 @@
+services:
+  zenoh-relay:
+    build: .
+    image: zenoh-relay:latest
+    container_name: zenoh-relay
+    # 宿主机网络：Zenoh 固定端口 7447 直连、Foxglove/rosbridge、
+    # 以及本机身份识别服务 127.0.0.1:8001 都原样可达（不依赖 bridge）
+    network_mode: host
+    env_file:
+      - .env
+    # 图像源为 camera（本地摄像头）时透传设备节点；摄像头不止一个时按需多列。
+    # 若宿主机没有该设备节点，容器创建会失败，删掉即可。
+    devices:
+      - /dev/video0:/dev/video0
+    # 开机自启动：配合 sudo systemctl enable docker，机器上电后守护进程拉起容器
+    restart: unless-stopped

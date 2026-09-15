@@ -1,0 +1,7 @@
+websockets>=11.0.3
+numpy>=1.26
+sounddevice>=0.5
+scipy>=1.13
+
+[:python_version < "3.11"]
+tomli>=2.0.1

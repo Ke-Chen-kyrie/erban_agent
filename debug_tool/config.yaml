@@ -1,0 +1,29 @@
+# 身份识别后端服务地址，界面中的注册、人脸搜索、声纹搜索、人脸验证、人脸检测等功能都会请求该地址。
+api_base: "http://192.168.217.100:8001"
+
+# 机器人控制服务端 URL，用于向机器人 CLI proxy 发送 turn、pick、lower-cup 等控制命令。
+shell_proxy_url: "http://192.168.217.100:8088/run"
+
+# 普通后端接口请求超时时间，单位为秒。
+request_timeout: 30
+
+# 机器人控制命令请求超时时间，单位为秒；机器人动作耗时较长时可适当调大。
+robot_command_timeout: 600
+
+# 本机摄像头编号；使用 auto 时程序会自动尝试可用摄像头，也可以填写 0、1 等具体编号。
+camera_index: "auto"
+
+# 机器人 Foxglove bridge WebSocket 地址，用于读取机器人摄像头图像。
+foxglove_bridge_url: "ws://192.168.217.100:8768"
+
+# 机器人头部摄像头图像话题。
+camera_topic_head: "/zj_humanoid/sensor/realsense_head/color/image_raw/compressed"
+
+# 机器人腰部/上方摄像头图像话题。
+camera_topic_up: "/zj_humanoid/sensor/realsense_up/color/image_raw/compressed"
+
+# 录音采样率，单位 Hz；默认 16000，需与后端声纹接口要求保持一致。
+audio_samplerate: 16000
+
+# 人脸检测标注阈值；分数大于等于该值显示匹配框，低于该值显示未匹配/低置信度框。
+face_detect_match_threshold: 0.7

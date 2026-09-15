@@ -1,0 +1,42 @@
+[project]
+name = "proactive-agent-realtime"
+version = "0.2.0"
+description = "小伴康养管家"
+requires-python = ">=3.10"
+dependencies = [
+    # ── 核心 ──
+    "httpx>=0.28",
+    "websockets>=16.0",
+    "websocket-client>=1.6",
+    "python-dotenv>=1.2",
+    "numpy>=1.26",
+    "Pillow>=12.3",
+    "pyyaml>=6.0",
+    # ── 视觉 ──
+    "opencv-python>=4.9",
+    # ── 音频 ──
+    "pyaudio>=0.2",
+    "sounddevice>=0.5",
+    "soundfile>=0.14",
+    "scipy>=1.13",
+    # ── LLM / Agent ──
+    "dashscope>=1.25.17",
+    "openai>=2.44",
+    "langfuse>=3.0",
+    # ── 唤醒词 / 本地 ASR ──
+    "sherpa-onnx>=1.13",
+    "sherpa-onnx-core>=1.13",
+    "pypinyin>=0.55",
+    # ── 本地 ASR 模型 ──
+    "modelscope>=1.38",
+    "torch>=2.13",
+    # ── ROS2 ──
+    "rosbags>=0.11",
+    # ── 其他 ──
+    "aiohttp>=3.14",
+    "aiortc>=1.9",
+    "av>=13",
+    "certifi>=2025",
+    "oss2>=2.19",
+    "eclipse-zenoh>=1.0",
+]

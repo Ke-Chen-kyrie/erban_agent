@@ -1,0 +1,13 @@
+# Seeduplex 唱歌工具配置
+[auth]
+api_key = "596TydkSSKuBQPKVkoyc_Mmy8HLKg1FM"   # Access Token（X-Api-Access-Key）
+app_id = "7467166470"                            # App ID（X-Api-App-ID）
+app_key = "PlgvMymc7f3tQnJ6"                     # 旧版控制台公共网关 key（X-Api-App-Key），固定值
+resource_id = "volc.speech.dialog"               # 资源 id（X-Api-Resource-Id）
+
+[session]
+speaker = "zh_female_vv_jupiter_bigtts"   # 唱歌音色（Vivi）
+enable_music = true
+
+[device]
+speaker_name = "Comica_EJoy D10 Pro RX"   # 扬声器名称关键词，留空 = 系统默认；可填如 "Comica"

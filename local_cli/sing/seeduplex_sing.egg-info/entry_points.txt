@@ -1,0 +1,2 @@
+[console_scripts]
+sing = sing_tool:main

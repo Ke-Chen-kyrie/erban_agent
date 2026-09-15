@@ -1,0 +1,667 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>守护视界 · 实时事件中心</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f4f8fb;
+      --surface: #ffffff;
+      --surface-raised: #ffffff;
+      --surface-soft: rgba(0, 76, 131, .045);
+      --line: rgba(0, 76, 131, .16);
+      --line-strong: rgba(0, 76, 131, .26);
+      --text: #004c83;
+      --text-soft: #3a6d92;
+      --muted: #52708a;
+      --mint: #fe6100;
+      --online: #149a63;
+      --critical: #d93636;
+      --warning: #e08900;
+      --info: #0b64a5;
+      --shadow: 0 14px 40px rgba(0, 76, 131, .12);
+    }
+
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      overflow: hidden;
+      font-family: Inter, "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+      color: var(--text);
+      background: var(--bg);
+    }
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      opacity: .5;
+      background-image: linear-gradient(rgba(0,76,131,.035) 1px, transparent 1px), linear-gradient(90deg, rgba(0,76,131,.035) 1px, transparent 1px);
+      background-size: 46px 46px;
+      mask-image: linear-gradient(to bottom, black, transparent 90%);
+    }
+    button { font: inherit; }
+    .shell { position: relative; z-index: 1; display: grid; grid-template-rows: 74px minmax(0, 1fr); height: 100%; padding: 0 24px 24px; }
+    header { display: flex; align-items: center; justify-content: space-between; min-width: 0; }
+    .brand { display: flex; align-items: center; gap: 12px; color: inherit; text-decoration: none; }
+    .brand-mark { display: grid; place-items: center; width: 38px; height: 38px; border: 1px solid rgba(0,76,131,.25); border-radius: 12px; color: #fff; background: linear-gradient(145deg, #0b64a5, var(--text)); box-shadow: 0 6px 16px rgba(0,76,131,.22); }
+    .brand-mark svg { width: 21px; height: 21px; }
+    .brand h1 { margin: 0; font-size: 19px; letter-spacing: .06em; font-weight: 680; }
+    .brand small { display: block; margin-top: 2px; color: var(--muted); font-size: 10px; letter-spacing: .17em; }
+    .header-meta { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 12px; }
+    .status-chip, .connection, .home-link { display: inline-flex; align-items: center; gap: 7px; min-height: 32px; padding: 0 10px; border: 1px solid var(--line); border-radius: 9px; background: rgba(255,255,255,.7); }
+    .status-chip { color: var(--text-soft); }
+    .status-chip svg { width: 14px; height: 14px; color: var(--mint); }
+    .home-link { color: var(--text-soft); text-decoration: none; transition: .18s ease; }
+    .home-link:hover { color: var(--text); border-color: rgba(254,97,0,.45); background: rgba(254,97,0,.07); }
+    .home-link:focus-visible { outline: 2px solid rgba(254,97,0,.55); outline-offset: 2px; }
+    .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--warning); box-shadow: 0 0 12px currentColor; }
+    .connection.online { color: var(--online); }
+    .connection.online .dot { background: var(--online); animation: breathe 2.2s ease-in-out infinite; }
+    .connection.offline { color: var(--critical); }
+    .connection.offline .dot { background: var(--critical); }
+    #clock { min-width: 142px; text-align: center; font-variant-numeric: tabular-nums; }
+    .fullscreen-toggle { display: inline-flex; align-items: center; gap: 7px; min-height: 32px; padding: 0 10px; border: 1px solid var(--line); border-radius: 9px; color: var(--text-soft); background: rgba(255,255,255,.7); cursor: pointer; transition: .18s ease; }
+    .fullscreen-toggle:hover { color: var(--text); border-color: rgba(254,97,0,.45); background: rgba(254,97,0,.07); }
+    .fullscreen-toggle:focus-visible { outline: 2px solid rgba(254,97,0,.55); outline-offset: 2px; }
+    .fullscreen-toggle svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+    .fullscreen-toggle .exit-icon { display: none; }
+    :fullscreen .fullscreen-toggle .enter-icon { display: none; }
+    :fullscreen .fullscreen-toggle .exit-icon { display: block; }
+
+    .launch-controls { display: flex; align-items: center; gap: 8px; }
+    .launch-btn { display: inline-flex; align-items: center; gap: 7px; min-height: 32px; padding: 0 10px; border: 1px solid var(--line); border-radius: 9px; color: var(--text-soft); background: rgba(255,255,255,.7); cursor: pointer; transition: .18s ease; font-size: 12px; }
+    .launch-btn:hover { color: var(--text); border-color: rgba(254,97,0,.45); background: rgba(254,97,0,.07); }
+    .launch-btn:focus-visible { outline: 2px solid rgba(254,97,0,.55); outline-offset: 2px; }
+    .launch-btn:disabled { opacity: .55; cursor: not-allowed; }
+    .launch-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); box-shadow: 0 0 12px currentColor; flex: none; }
+    .launch-btn.running .launch-dot { background: var(--online); animation: breathe 2.2s ease-in-out infinite; }
+    .launch-btn.error .launch-dot { background: var(--critical); }
+    .launch-btn.starting .launch-dot, .launch-btn.stopping .launch-dot { background: transparent; border: 2px solid rgba(254,97,0,.3); border-top-color: var(--mint); box-shadow: none; animation: spin .8s linear infinite; }
+    .launch-btn.running .launch-action { color: var(--critical); }
+    .launch-pid { color: var(--muted); font-size: 10px; font-variant-numeric: tabular-nums; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .layout { display: grid; grid-template-columns: minmax(0, 1.68fr) minmax(370px, .82fr); gap: 16px; min-height: 0; }
+    .panel { border: 1px solid var(--line); border-radius: 18px; background: rgba(255,255,255,.96); box-shadow: var(--shadow); overflow: hidden; backdrop-filter: blur(16px); }
+    .panel-head { display: flex; align-items: center; justify-content: space-between; min-height: 52px; padding: 0 17px; border-bottom: 1px solid var(--line); }
+    .panel-title { display: flex; align-items: baseline; gap: 9px; font-size: 14px; font-weight: 650; }
+    .eyebrow { color: var(--muted); font-size: 10px; letter-spacing: .13em; font-weight: 500; }
+
+    .camera-panel { display: grid; grid-template-rows: 56px minmax(0, 1fr); }
+    .live-pill { display: inline-flex; align-items: center; gap: 7px; padding: 5px 9px; border: 1px solid rgba(217,54,54,.28); border-radius: 999px; color: var(--critical); background: rgba(217,54,54,.07); font-size: 10px; letter-spacing: .13em; }
+    .live-pill i { width: 6px; height: 6px; border-radius: 50%; background: var(--critical); animation: breathe 1.8s infinite; }
+    .camera-head-actions { display: flex; align-items: center; gap: 10px; }
+    .attention-toggle { position: relative; display: inline-flex; align-items: center; gap: 7px; color: var(--muted); font-size: 11px; cursor: pointer; user-select: none; }
+    .attention-toggle input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+    .attention-switch { position: relative; width: 30px; height: 17px; border: 1px solid var(--line-strong); border-radius: 999px; background: #dfe9f0; transition: .18s ease; }
+    .attention-switch::after { content: ""; position: absolute; top: 2px; left: 2px; width: 11px; height: 11px; border-radius: 50%; background: #fff; box-shadow: 0 1px 4px rgba(0,76,131,.25); transition: .18s ease; }
+    .attention-toggle input:checked + .attention-switch { border-color: rgba(20,154,99,.55); background: var(--online); }
+    .attention-toggle input:checked + .attention-switch::after { transform: translateX(13px); }
+    .attention-toggle input:focus-visible + .attention-switch { outline: 2px solid rgba(254,97,0,.55); outline-offset: 2px; }
+    .camera-stage { position: relative; display: grid; place-items: center; min-height: 0; overflow: hidden; background: #0a1622; }
+    #cameraStream { width: 100%; height: 100%; object-fit: contain; display: block; }
+    #attentionOverlay { position: absolute; z-index: 4; left: 12px; bottom: 20px; width: 380px; height: 214px; object-fit: cover; background: #0a1622; border: 2px solid rgba(255,255,255,.85); border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,.5); opacity: 0; pointer-events: none; transition: opacity .16s ease; }
+    #attentionOverlay.visible { opacity: 1; }
+    .camera-stage::after { content: ""; position: absolute; inset: 15px; pointer-events: none; border: 1px solid rgba(139,218,194,.12); border-radius: 9px; }
+    .camera-shade { position: absolute; inset: 0; pointer-events: none; background: linear-gradient(to bottom, rgba(1,6,5,.42), transparent 15%, transparent 78%, rgba(1,6,5,.72)); }
+    .camera-hud { position: absolute; z-index: 2; left: 28px; right: 28px; display: flex; align-items: center; justify-content: space-between; color: #c5d8d2; font-size: 11px; letter-spacing: .04em; text-shadow: 0 1px 5px #000; }
+    .camera-hud.top { top: 27px; }
+    .camera-hud.bottom { bottom: 27px; }
+    .hud-label { display: inline-flex; align-items: center; gap: 7px; }
+    .hud-label i { width: 6px; height: 6px; border-radius: 50%; background: var(--mint); box-shadow: 0 0 11px var(--mint); }
+    .camera-hud b { color: white; font-weight: 600; }
+    .camera-empty { position: absolute; inset: 0; z-index: 3; display: grid; place-content: center; justify-items: center; gap: 13px; color: #8aa4b8; background: radial-gradient(circle, rgba(0,76,131,.28), transparent 43%), #0a1622; transition: opacity .25s; }
+    .camera-empty.hidden { opacity: 0; pointer-events: none; }
+    .camera-empty svg { width: 46px; height: 46px; color: #5f7f9c; }
+    .camera-empty strong { color: #cfe0ee; font-size: 15px; font-weight: 560; }
+    .camera-empty span { font-size: 12px; }
+
+    .right-column { display: grid; grid-template-rows: minmax(350px, 1.14fr) minmax(250px, .86fr); gap: 16px; min-height: 0; }
+    .event-panel { display: grid; grid-template-rows: 52px minmax(0, 1fr); min-height: 0; }
+    .event-count { color: var(--muted); font-size: 11px; }
+    .event-head-actions { display: flex; align-items: center; gap: 10px; }
+    .event-clear-btn { display: inline-flex; align-items: center; min-height: 28px; padding: 0 10px; border: 1px solid var(--line); border-radius: 8px; color: var(--muted); background: #fff; font-size: 11px; cursor: pointer; transition: .18s ease; }
+    .event-clear-btn:hover { color: var(--critical); border-color: rgba(217,54,54,.4); background: rgba(217,54,54,.07); }
+    .event-clear-btn:active { transform: translateY(1px); }
+    .event-clear-btn:focus-visible { outline: 2px solid rgba(217,54,54,.5); outline-offset: 2px; }
+    .event-content { display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 13px; min-height: 0; padding: 14px; }
+    .current-event { position: relative; display: grid; grid-template-columns: 100px minmax(0, 1fr); align-items: center; gap: 14px; min-height: 124px; padding: 11px 15px; border: 1px solid var(--line-strong); border-radius: 14px; background: linear-gradient(110deg, rgba(0,76,131,.06), rgba(0,76,131,.015)); overflow: hidden; }
+    .current-event::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 3px; background: #b9c9d6; }
+    .current-event.critical { border-color: rgba(217,54,54,.35); background: linear-gradient(110deg, rgba(217,54,54,.1), rgba(217,54,54,.02)); }
+    .current-event.critical::before { background: var(--critical); box-shadow: 0 0 20px var(--critical); }
+    .current-event.warning { border-color: rgba(224,137,0,.35); background: linear-gradient(110deg, rgba(224,137,0,.1), rgba(224,137,0,.02)); }
+    .current-event.warning::before { background: var(--warning); }
+    .current-event.info { border-color: rgba(11,100,165,.3); background: linear-gradient(110deg, rgba(11,100,165,.09), rgba(11,100,165,.02)); }
+    .current-event.info::before { background: var(--info); }
+    .event-icon { display: grid; place-items: center; width: 100px; height: 100px; overflow: hidden; border-radius: 19px; background: rgba(0,76,131,.06); }
+    .event-image { display: block; width: 78px; height: 78px; object-fit: contain; transform: scale(1.25); filter: drop-shadow(0 5px 8px rgba(0,0,0,.25)); }
+    .event-icon-fallback { font-size: 30px; }
+    .event-copy { min-width: 0; }
+    .event-kicker { display: flex; align-items: center; justify-content: flex-start; gap: 8px; margin-bottom: 6px; }
+    .severity-badge { padding: 3px 7px; border-radius: 999px; color: var(--muted); background: rgba(0,76,131,.07); font-size: 10px; }
+    .critical .severity-badge { color: var(--critical); background: rgba(217,54,54,.1); }
+    .warning .severity-badge { color: #b36b00; background: rgba(224,137,0,.12); }
+    .info .severity-badge { color: var(--info); background: rgba(11,100,165,.1); }
+    .event-kicker .event-time { margin-left: auto; }
+    .event-time { color: var(--muted); font: 10px ui-monospace, monospace; font-variant-numeric: tabular-nums; }
+    .event-copy strong { display: block; overflow: hidden; color: var(--text); font-size: 19px; line-height: 1.25; text-overflow: ellipsis; white-space: nowrap; }
+    .event-copy p { margin: 6px 0 0; overflow: hidden; color: var(--text-soft); font-size: 12px; line-height: 1.45; text-overflow: ellipsis; white-space: nowrap; }
+
+    .history { display: grid; grid-template-rows: auto minmax(0, 1fr); min-height: 0; }
+    .section-label { display: flex; justify-content: space-between; margin: 0 2px 8px; color: var(--muted); font-size: 11px; }
+    .event-list { display: flex; flex-direction: column; gap: 6px; min-height: 0; overflow-y: auto; padding-right: 2px; scrollbar-width: thin; scrollbar-color: #c3d4e2 transparent; }
+    .event-list-empty { display: grid; place-items: center; height: 100%; min-height: 54px; border: 1px dashed var(--line); border-radius: 10px; color: var(--muted); font-size: 12px; }
+    .event-row { display: grid; grid-template-columns: 36px minmax(0, 1fr) auto; align-items: center; gap: 9px; min-height: 46px; padding: 5px 9px 5px 7px; border: 1px solid transparent; border-radius: 10px; background: var(--surface-soft); }
+    .event-row:hover { border-color: var(--line); background: rgba(0,76,131,.06); }
+    .event-row-icon { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 8px; background: rgba(0,76,131,.06); }
+    .event-row-icon .event-image { width: 31px; height: 31px; transform: none; filter: none; }
+    .event-row-icon .event-icon-fallback { font-size: 17px; }
+    .event-row-copy { min-width: 0; }
+    .event-row-copy strong { display: block; overflow: hidden; color: var(--text); font-size: 12px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+    .event-row-copy span { display: block; overflow: hidden; margin-top: 2px; color: var(--muted); font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+    .event-row-meta { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; color: var(--muted); font-size: 9px; }
+    .event-row-meta i { width: 6px; height: 6px; border-radius: 50%; background: #b9c9d6; }
+    .event-row.critical .event-row-meta i { background: var(--critical); }
+    .event-row.warning .event-row-meta i { background: var(--warning); }
+    .event-row.info .event-row-meta i { background: var(--info); }
+
+    .chat-panel { display: grid; grid-template-rows: 52px minmax(0, 1fr); min-height: 0; }
+    .agent-status { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 11px; }
+    .agent-status i { width: 6px; height: 6px; border-radius: 50%; background: var(--online); }
+    .messages { display: flex; flex-direction: column; gap: 11px; min-height: 0; overflow-y: auto; padding: 14px; scrollbar-width: thin; scrollbar-color: #c3d4e2 transparent; }
+    .messages-empty { margin: auto; max-width: 230px; color: var(--muted); text-align: center; font-size: 12px; line-height: 1.7; }
+    .message { display: flex; flex-direction: column; max-width: 90%; animation: arrive .22s ease-out; }
+    .message.agent, .message.system { align-self: flex-start; }
+    .message.user { align-self: flex-end; align-items: flex-end; }
+    .message-meta { margin: 0 3px 5px; color: #52708a; font-size: 10px; }
+    .bubble { padding: 9px 11px; border: 1px solid var(--line); border-radius: 4px 12px 12px 12px; background: var(--surface-raised); color: var(--text); font-size: 13px; line-height: 1.55; white-space: pre-wrap; word-break: break-word; }
+    .user .bubble { border-color: rgba(254,97,0,.3); border-radius: 12px 4px 12px 12px; background: linear-gradient(135deg, rgba(254,97,0,.13), rgba(254,97,0,.06)); }
+    .system .bubble { color: var(--muted); background: rgba(0,76,131,.04); font-size: 11px; }
+    .message.streaming .bubble::after { content: ""; display: inline-block; width: 2px; height: 1em; margin-left: 4px; vertical-align: -.12em; background: var(--mint); animation: cursor .85s steps(1) infinite; }
+    /* To C 页面不展示中断标记：内容显示完整时该提示很突兀。interrupted 状态仍保留在消息数据里，仅供内部/审计。 */
+    @keyframes breathe { 50% { opacity: .42; transform: scale(.82); } }
+    @keyframes arrive { from { opacity: 0; transform: translateY(5px); } }
+    @keyframes cursor { 50% { opacity: 0; } }
+
+    @media (max-width: 1080px) {
+      .layout { grid-template-columns: minmax(0, 1.45fr) minmax(350px, .9fr); }
+      .status-chip { display: none; }
+    }
+    @media (max-width: 900px) {
+      body { overflow: auto; }
+      .shell { height: auto; min-height: 100%; padding: 0 14px 14px; }
+      .layout { grid-template-columns: 1fr; grid-template-rows: minmax(430px, 62vh) auto; }
+      .right-column { grid-template-rows: 430px 390px; }
+      #clock { display: none; }
+      .fullscreen-toggle span, .connection span, .home-link span { display: none; }
+      .launch-btn .launch-pid { display: none; }
+      .connection { padding: 0 11px; }
+    }
+    body.embedded .shell { grid-template-rows: auto minmax(0, 1fr); padding: 14px; }
+    body.embedded header { display: flex; align-items: center; }
+    body.embedded .header-meta { flex: 1; align-items: center; }
+    body.embedded .launch-controls { flex: 1; gap: 10px; }
+    body.embedded .launch-btn { flex: 1; justify-content: center; min-height: 46px; font-size: 14px; border-radius: 10px; color: #fff; background: linear-gradient(145deg, #3d8ec9, #1e6ba8); border-color: rgba(30,107,168,.8); box-shadow: 0 6px 16px rgba(30,107,168,.2), inset 0 1px rgba(255,255,255,.28); }
+    body.embedded .launch-btn:hover { background: linear-gradient(145deg, #4c9ad4, #2678b5); }
+    body.embedded .launch-btn .launch-name { font-weight: 600; letter-spacing: .04em; }
+    body.embedded .launch-btn .launch-action { font-size: 14px; color: #ffd9c0; font-weight: 600; }
+    body.embedded .launch-btn .launch-dot { background: rgba(255,255,255,.85); }
+    body.embedded .launch-btn.running .launch-dot { background: #7cfcce; }
+    body.embedded .launch-btn.running .launch-action { color: #ffc2c2; }
+    body.embedded .brand,
+    body.embedded .home-link,
+    body.embedded .status-chip,
+    body.embedded .fullscreen-toggle,
+    body.embedded #clock,
+    body.embedded .connection { display: none; }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; } }
+    .toast { position: fixed; z-index: 5; top: 86px; left: 50%; transform: translateX(-50%) translateY(-10px); max-width: min(600px, 92vw); padding: 10px 16px; border: 1px solid rgba(0,76,131,.2); border-radius: 12px; color: var(--text); background: rgba(255,255,255,.97); box-shadow: var(--shadow); font-size: 13px; line-height: 1.5; opacity: 0; pointer-events: none; transition: opacity .22s ease, transform .22s ease; backdrop-filter: blur(10px); }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    .toast b { color: var(--info); }
+  </style>
+</head>
+<body>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <main class="shell">
+    <header>
+      <a class="brand" href="/">
+        <div class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 3 4.5 6v5.3c0 4.6 3 7.7 7.5 9.7 4.5-2 7.5-5.1 7.5-9.7V6L12 3Z"/><path d="M8.5 12h2l1.2-2.6 1.5 5 1.1-2.4h1.5"/></svg>
+        </div>
+        <div><h1>迩伴Agent</h1><small>REAL-TIME CARE CENTER</small></div>
+      </a>
+      <div class="header-meta">
+        <a class="home-link" href="/" title="返回首页"><span>返回首页</span></a>
+        <div class="status-chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 15.5V19h3.5M20 8.5V5h-3.5M6.1 7.4A7 7 0 0 1 18.7 9M17.9 16.6A7 7 0 0 1 5.3 15"/></svg>AI 持续分析中</div>
+        <button class="fullscreen-toggle" id="fullscreenToggle" type="button" title="进入全屏" aria-label="进入全屏">
+          <svg class="enter-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H3v5M16 3h5v5M8 21H3v-5M16 21h5v-5"/></svg>
+          <svg class="exit-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8h5V3M21 8h-5V3M3 16h5v5M21 16h-5v5"/></svg><span id="fullscreenText">全屏</span>
+        </button>
+        <div class="launch-controls">
+          <button class="launch-btn" data-key="event_detection" type="button" title="启动/停止事件检测">
+            <i class="launch-dot" aria-hidden="true"></i><span class="launch-name">事件检测</span><span class="launch-action">启动</span><span class="launch-pid"></span>
+          </button>
+          <button class="launch-btn" data-key="agent" type="button" title="启动/停止 Agent">
+            <i class="launch-dot" aria-hidden="true"></i><span class="launch-name">Agent</span><span class="launch-action">启动</span><span class="launch-pid"></span>
+          </button>
+        </div>
+        <span id="clock">--</span>
+        <div class="connection" id="connection"><i class="dot"></i><span id="connectionText">正在连接</span></div>
+      </div>
+    </header>
+
+    <section class="layout">
+      <article class="panel camera-panel">
+        <div class="panel-head"><div class="panel-title"><span>实时画面</span><span class="eyebrow">CAMERA 01</span></div><div class="camera-head-actions"><label class="attention-toggle" title="开启后，关注点结果将在实时画面上展示 3 秒"><span>展示关注点</span><input id="attentionToggle" type="checkbox" autocomplete="off"><span class="attention-switch" aria-hidden="true"></span></label><div class="live-pill"><i></i> LIVE</div></div></div>
+        <div class="camera-stage">
+          <img id="cameraStream" src="/stream.mjpg" alt="摄像头实时画面">
+          <img id="attentionOverlay" alt="关注点画面">
+          <div class="camera-shade"></div>
+          <div class="camera-hud top"><span class="hud-label"><i></i><b>CAM 01</b> · 在线</span><span>EVENT DETECTION</span></div>
+          <div class="camera-hud bottom"><span></span><span>最后画面 <b id="frameTime">等待中</b></span></div>
+          <div class="camera-empty" id="cameraEmpty">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.35"><rect x="3" y="6" width="14" height="12" rx="2"/><path d="m17 10 4-2v8l-4-2M7.5 10.5h5M10 8v5"/></svg>
+            <strong>等待摄像头画面</strong><span>启动检测程序后，实时帧将在这里显示</span>
+          </div>
+        </div>
+      </article>
+
+      <aside class="right-column">
+        <article class="panel event-panel">
+          <div class="panel-head"><div class="panel-title"><span>事件检测</span><span class="eyebrow">DETECTION</span></div><div class="event-head-actions"><div class="event-count" id="eventCount">0 条记录</div><button type="button" class="event-clear-btn" id="clearAllBtn" title="清空事件记录与对话消息">清空</button></div></div>
+          <div class="event-content">
+            <div class="current-event" id="currentEvent">
+              <div class="event-icon" id="eventIcon"><span class="event-icon-fallback">✓</span></div>
+              <div class="event-copy">
+                <div class="event-kicker"><span class="severity-badge" id="eventSeverity">状态正常</span><time class="event-time" id="eventTime">--:--:--</time></div>
+                <strong id="eventName">暂无异常事件</strong><p id="eventDescription">系统正在持续分析实时画面</p>
+              </div>
+            </div>
+            <div class="history">
+              <div class="section-label"><span>最近事件</span><span>按时间倒序</span></div>
+              <div class="event-list" id="recentEvents"><div class="event-list-empty">等待事件推送</div></div>
+            </div>
+          </div>
+        </article>
+        <article class="panel chat-panel">
+          <div class="panel-head"><div class="panel-title"><span>迩伴Agent</span><span class="eyebrow">ASSISTANT</span></div><div class="event-head-actions"><div class="agent-status"><i></i><span id="agentStatusText">等待消息</span></div></div></div>
+          <div class="messages" id="messages"><div class="messages-empty" id="messagesEmpty">等待用户与 Agent 的对话消息…<br>流式回复将在生成时实时显示。</div></div>
+        </article>
+      </aside>
+    </section>
+  </main>
+
+  <script>
+    if (typeof location !== "undefined" && location.search.indexOf("embed=1") !== -1) document.body.classList.add("embedded");
+    const labels = {
+      wave: "挥手", chest_pain: "疑似胸部不适", head_pain: "疑似头部不适", abdomen_pain: "疑似腹部不适", rub_shoulder: "揉肩",
+      ok: "OK 手势", thumbs_up: "点赞手势", fall: "检测到跌倒", bed_fall: "检测到坠床", lying_on_ground: "人员躺地",
+      smoke: "检测到烟雾", fire: "检测到明火", water_stain: "检测到地面积水",
+      water_stain_danger: "地面积水滑倒风险", night_leaving: "夜间离床"
+    };
+    const warningEvents = new Set(["head_pain", "abdomen_pain", "rub_shoulder", "smoke", "water_stain", "water_stain_danger", "night_leaving"]);
+    const infoEvents = new Set(["wave", "ok", "thumbs_up"]);
+    const severityNames = { critical: "紧急告警", warning: "风险提示", info: "普通提示", normal: "状态正常" };
+    const $ = id => document.getElementById(id);
+    let eventHistory = [];
+    let chatHistory = [];
+    let reconnectTimer;
+    const messageNodes = new Map();
+    const ATTENTION_HOLD_MS = 3000;
+    const ATTENTION_POLL_MS = 1000;
+    let attentionPollTimer;
+    let attentionHoldTimer;
+    let attentionRequestInFlight = false;
+    let attentionAbortController;
+    let attentionGeneration = 0;
+    let attentionErrorShown = false;
+
+    function hideAttentionOverlay() {
+      $("attentionOverlay").classList.remove("visible");
+    }
+    function scheduleAttentionPoll(delay = ATTENTION_POLL_MS) {
+      clearTimeout(attentionPollTimer);
+      if (!$("attentionToggle").checked) return;
+      attentionPollTimer = setTimeout(() => { void pollAttentionQueue(); }, delay);
+    }
+    async function fetchAttentionJson(path, signal) {
+      const response = await fetch(path, { signal });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.detail || `HTTP ${response.status}`);
+      return data;
+    }
+    function preloadAttentionImage(source, signal) {
+      return new Promise((resolve, reject) => {
+        const image = new Image();
+        image.onload = () => resolve(source);
+        image.onerror = () => reject(new Error("关注点图片加载失败"));
+        signal.addEventListener("abort", () => {
+          const error = new Error("关注点请求已取消");
+          error.name = "AbortError";
+          reject(error);
+        }, { once: true });
+        image.src = source;
+      });
+    }
+    function normalizeAttentionImage(value, rendered) {
+      if (typeof value !== "string" || !value.trim()) return "";
+      const source = value.trim();
+      if (/^data:image\/[^;,]+;base64,/i.test(source)) return source;
+      const payload = source.includes(",") ? source.split(",", 2)[1] : source;
+      if (!payload) return "";
+      const declaredMime = rendered?.image_mime_type || rendered?.mime_type;
+      const mime = typeof declaredMime === "string" && /^image\/[^;,]+$/i.test(declaredMime)
+        ? declaredMime
+        : "image/jpeg";
+      return `data:${mime};base64,${payload}`;
+    }
+    async function pollAttentionQueue() {
+      if (!$("attentionToggle").checked || attentionRequestInFlight) return;
+      attentionRequestInFlight = true;
+      const generation = attentionGeneration;
+      const controller = new AbortController();
+      attentionAbortController = controller;
+      try {
+        const queue = await fetchAttentionJson("/api/attention/queue", controller.signal);
+        if (generation !== attentionGeneration || !$("attentionToggle").checked) return;
+        const queueSize = Number(queue.queue_size);
+        if (!Number.isFinite(queueSize) || queueSize <= 0) {
+          scheduleAttentionPoll();
+          return;
+        }
+        const data = await fetchAttentionJson("/api/attention/pop", controller.signal);
+        if (generation !== attentionGeneration || !$("attentionToggle").checked) return;
+        const image = normalizeAttentionImage(data?.rendered?.image_base64, data?.rendered);
+        if (!image) {
+          throw new Error("关注点图片格式无效");
+        }
+        await preloadAttentionImage(image, controller.signal);
+        if (generation !== attentionGeneration || !$("attentionToggle").checked) return;
+        attentionErrorShown = false;
+        const overlay = $("attentionOverlay");
+        overlay.src = image;
+        overlay.classList.add("visible");
+        clearTimeout(attentionHoldTimer);
+        attentionHoldTimer = setTimeout(() => {
+          hideAttentionOverlay();
+          scheduleAttentionPoll(0);
+        }, ATTENTION_HOLD_MS);
+      } catch (error) {
+        if (error.name === "AbortError") return;
+        console.warn("获取关注点失败", error);
+        if (!attentionErrorShown && $("attentionToggle").checked) {
+          showToast("关注点暂时不可用", error.message);
+          attentionErrorShown = true;
+        }
+        scheduleAttentionPoll();
+      } finally {
+        if (attentionAbortController === controller) {
+          attentionAbortController = undefined;
+          attentionRequestInFlight = false;
+        }
+      }
+    }
+    function setAttentionEnabled(enabled) {
+      attentionGeneration += 1;
+      if (attentionAbortController) attentionAbortController.abort();
+      attentionAbortController = undefined;
+      clearTimeout(attentionPollTimer);
+      clearTimeout(attentionHoldTimer);
+      attentionRequestInFlight = false;
+      attentionErrorShown = false;
+      hideAttentionOverlay();
+      if (enabled) return pollAttentionQueue();
+    }
+
+    function formatTime(value) {
+      if (!value) return "--:--:--";
+      const date = new Date(value);
+      return Number.isNaN(date.getTime()) ? String(value).slice(-8) : date.toLocaleTimeString("zh-CN", { hour12: false });
+    }
+    function severityOf(event) {
+      const level = String(event.level || "").toLowerCase();
+      if (["critical", "danger", "emergency"].includes(level)) return "critical";
+      if (["warning", "warn"].includes(level)) return "warning";
+      if (level === "info") return "info";
+      if (infoEvents.has(event.event)) return "info";
+      if (warningEvents.has(event.event)) return "warning";
+      return "critical";
+    }
+    function setConnection(mode, text) { $("connection").className = `connection ${mode}`; $("connectionText").textContent = text; }
+    function setAgentStatus(status) {
+      $("agentStatusText").textContent =
+        status === "listening" ? "聆听中…" :
+        status === "replying" ? "正在回复" :
+        status === "idle" ? "消息已同步" : "等待消息";
+    }
+    let toastTimer;
+    function showToast(title, description) {
+      const toast = $("toast");
+      toast.replaceChildren();
+      const b = document.createElement("b"); b.textContent = title;
+      toast.append(b);
+      if (description) { const span = document.createElement("span"); span.textContent = ` · ${description}`; toast.append(span); }
+      toast.classList.add("show");
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => toast.classList.remove("show"), 6000);
+    }
+    function syncFullscreenButton() {
+      const active = Boolean(document.fullscreenElement || document.webkitFullscreenElement);
+      $("fullscreenText").textContent = active ? "退出全屏" : "全屏";
+      $("fullscreenToggle").title = active ? "退出全屏（Esc）" : "进入全屏";
+      $("fullscreenToggle").setAttribute("aria-label", active ? "退出全屏" : "进入全屏");
+    }
+    async function toggleFullscreen() {
+      const active = document.fullscreenElement || document.webkitFullscreenElement;
+      try {
+        if (active) { const exit = document.exitFullscreen || document.webkitExitFullscreen; if (exit) await exit.call(document); }
+        else { const enter = document.documentElement.requestFullscreen || document.documentElement.webkitRequestFullscreen; if (enter) await enter.call(document.documentElement); }
+      } catch (error) { console.warn("无法切换全屏模式", error); }
+    }
+    function createEventIcon(eventType) {
+      if (!Object.hasOwn(labels, eventType)) {
+        const fallback = document.createElement("span"); fallback.className = "event-icon-fallback"; fallback.textContent = "!"; fallback.setAttribute("aria-hidden", "true"); return fallback;
+      }
+      const icon = document.createElement("img"); icon.className = "event-image"; icon.src = `/event_icons/${encodeURIComponent(eventType)}.png`; icon.alt = ""; icon.setAttribute("aria-hidden", "true");
+      icon.addEventListener("error", () => { const fallback = document.createElement("span"); fallback.className = "event-icon-fallback"; fallback.textContent = "!"; icon.replaceWith(fallback); }, { once: true });
+      return icon;
+    }
+    function renderEvent(event) {
+      const severity = severityOf(event);
+      $("currentEvent").className = `current-event ${severity}`;
+      $("eventIcon").replaceChildren(createEventIcon(event.event));
+      $("eventSeverity").textContent = severityNames[severity];
+      $("eventName").textContent = labels[event.event] || event.event;
+      $("eventDescription").textContent = event.description || "检测到新的事件";
+      $("eventTime").textContent = formatTime(event.timestamp);
+    }
+    function eventRow(item) {
+      const severity = severityOf(item);
+      const row = document.createElement("div"); row.className = `event-row ${severity}`;
+      const icon = document.createElement("div"); icon.className = "event-row-icon"; icon.append(createEventIcon(item.event));
+      const copy = document.createElement("div"); copy.className = "event-row-copy";
+      const name = document.createElement("strong"); name.textContent = labels[item.event] || item.event;
+      const description = document.createElement("span"); description.textContent = item.description || severityNames[severity];
+      copy.append(name, description);
+      const meta = document.createElement("div"); meta.className = "event-row-meta";
+      const dot = document.createElement("i"); const time = document.createElement("span"); time.textContent = formatTime(item.timestamp); meta.append(dot, time);
+      row.append(icon, copy, meta); return row;
+    }
+    function resetCurrentEvent() {
+      $("currentEvent").className = "current-event";
+      const fallback = document.createElement("span"); fallback.className = "event-icon-fallback"; fallback.textContent = "✓";
+      $("eventIcon").replaceChildren(fallback);
+      $("eventSeverity").textContent = severityNames.normal;
+      $("eventName").textContent = "暂无异常事件";
+      $("eventDescription").textContent = "系统正在持续分析实时画面";
+      $("eventTime").textContent = "--:--:--";
+    }
+    function renderEvents(events) {
+      eventHistory = Array.isArray(events) ? events : [];
+      $("eventCount").textContent = `${eventHistory.length} 条记录`;
+      const recent = $("recentEvents"); recent.replaceChildren();
+      const list = eventHistory.slice(-8).reverse();
+      if (!list.length) { resetCurrentEvent(); const empty = document.createElement("div"); empty.className = "event-list-empty"; empty.textContent = "等待事件推送"; recent.append(empty); return; }
+      renderEvent(eventHistory[eventHistory.length - 1]);
+      list.forEach(item => recent.append(eventRow(item)));
+    }
+    async function clearEvents() {
+      try {
+        const response = await fetch("/api/events/clear", { method: "POST" });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        renderEvents([]);
+      } catch (error) { console.warn("清空事件失败", error); }
+    }
+    async function clearChat() {
+      try {
+        const response = await fetch("/api/chat/clear", { method: "POST" });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        renderMessages([]);
+      } catch (error) { console.warn("清空对话失败", error); }
+    }
+    async function clearAll() { await Promise.all([clearEvents(), clearChat()]); }
+    function roleName(role) { return role === "user" ? "用户" : role === "system" ? "系统" : "Agent"; }
+    function messageElement(message) {
+      const item = document.createElement("div");
+      item.className = `message ${message.role || "agent"}${message.streaming ? " streaming" : ""}${message.interrupted ? " interrupted" : ""}`;
+      item.dataset.messageId = message.id;
+      const meta = document.createElement("div"); meta.className = "message-meta"; meta.textContent = `${roleName(message.role)} · ${formatTime(message.timestamp)}`;
+      const bubble = document.createElement("div"); bubble.className = "bubble"; bubble.textContent = message.content || (message.streaming ? "" : "（空消息）");
+      item.append(meta, bubble); messageNodes.set(message.id, item); return item;
+    }
+    function renderMessages(messages) {
+      chatHistory = Array.isArray(messages) ? messages : [];
+      const box = $("messages"); box.replaceChildren(); messageNodes.clear();
+      if (!chatHistory.length) {
+        const empty = document.createElement("div"); empty.className = "messages-empty"; empty.innerHTML = "等待用户与 Agent 的对话消息…<br>流式回复将在生成时实时显示。"; box.append(empty); $("agentStatusText").textContent = "等待消息"; return;
+      }
+      chatHistory.forEach(message => box.append(messageElement(message)));
+      $("agentStatusText").textContent = chatHistory.some(item => item.streaming) ? "正在回复" : "消息已同步";
+      box.scrollTop = box.scrollHeight;
+    }
+    function updateStream(packet) {
+      const index = chatHistory.findIndex(item => item.id === packet.message_id); if (index < 0) return;
+      chatHistory[index].content += packet.delta || "";
+      const node = messageNodes.get(packet.message_id); if (node) node.querySelector(".bubble").textContent = chatHistory[index].content;
+      $("agentStatusText").textContent = "正在回复"; $("messages").scrollTop = $("messages").scrollHeight;
+    }
+    function startStream(message) {
+      const existing = chatHistory.findIndex(item => item.id === message.id);
+      if (existing >= 0) chatHistory[existing] = message; else chatHistory.push(message); renderMessages(chatHistory);
+    }
+    function endStream(message) {
+      const index = chatHistory.findIndex(item => item.id === message.id);
+      if (index >= 0) chatHistory[index] = message; else if (message.content) chatHistory.push(message);
+      renderMessages(chatHistory.filter(item => item.content || item.streaming));
+    }
+    function appendMessage(message) { chatHistory.push(message); renderMessages(chatHistory); }
+    function applyState(state) {
+      if (Array.isArray(state.processes)) state.processes.forEach(renderProcessState);
+      renderEvents(state.events || []);
+      const messages = [...(state.messages || []), ...(state.streams || [])]; messages.sort((a, b) => String(a.timestamp).localeCompare(String(b.timestamp))); renderMessages(messages);
+      if (state.frame_available) $("cameraEmpty").classList.add("hidden");
+      if (state.last_frame_at) $("frameTime").textContent = formatTime(state.last_frame_at);
+    }
+    function renderProcessState(proc) {
+      const btn = document.querySelector(`.launch-btn[data-key="${proc.key}"]`);
+      if (!btn) return;
+      const running = proc.status === "running";
+      const transitional = proc.status === "starting" || proc.status === "stopping";
+      btn.classList.toggle("running", running);
+      btn.classList.toggle("error", proc.status === "error");
+      btn.classList.toggle("starting", proc.status === "starting");
+      btn.classList.toggle("stopping", proc.status === "stopping");
+      btn.disabled = transitional;
+      btn.querySelector(".launch-action").textContent =
+        proc.status === "error" ? "出错" :
+        proc.status === "starting" ? "启动中…" :
+        proc.status === "stopping" ? "停止中…" :
+        running ? "停止" : "启动";
+      // To C：按钮上不直接显示 PID/退出码，鼠标悬停时在 title 里展示。
+      // 正常停止（退出码 0）不显示；仅异常退出才提示退出码。
+      btn.querySelector(".launch-pid").textContent = "";
+      const detail =
+        running && proc.pid ? `PID ${proc.pid}` :
+        proc.status === "stopped" && proc.exit_code ? `退出码 ${proc.exit_code}` : "";
+      btn.title = proc.status === "error" && proc.error
+        ? `${proc.label}：${proc.error}${detail ? `（${detail}）` : ""}`
+        : proc.status === "starting"
+          ? "启动中…（首次启动可能需要数分钟）"
+          : proc.status === "stopping"
+            ? "停止中…"
+            : `${running ? "停止" : "启动"}${proc.label}${detail ? ` · ${detail}` : ""}`;
+    }
+    async function loadProcesses() {
+      try {
+        const response = await fetch("/api/processes");
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const data = await response.json();
+        if (Array.isArray(data.processes)) data.processes.forEach(renderProcessState);
+      } catch (error) { console.warn("加载进程状态失败", error); }
+    }
+    async function toggleProcess(key) {
+      const btn = document.querySelector(`.launch-btn[data-key="${key}"]`);
+      if (!btn || btn.disabled) return;
+      const running = btn.classList.contains("running");
+      // 乐观更新：请求发出后立即禁用并显示过渡态，不等 WebSocket 广播，
+      // 避免 compose up 期间重复点击。后续由 renderProcessState 统一校正。
+      btn.disabled = true;
+      btn.classList.add(running ? "stopping" : "starting");
+      btn.classList.remove("running");
+      btn.querySelector(".launch-action").textContent = running ? "停止中…" : "启动中…";
+      try {
+        const response = await fetch(`/api/processes/${encodeURIComponent(key)}/${running ? "stop" : "start"}`, { method: "POST" });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.error || `HTTP ${response.status}`);
+        renderProcessState(data.process);
+      } catch (error) {
+        showToast(running ? "停止失败" : "启动失败", error.message);
+        loadProcesses();
+      }
+    }
+    function connect() {
+      clearTimeout(reconnectTimer);
+      const protocol = location.protocol === "https:" ? "wss:" : "ws:";
+      const ws = new WebSocket(`${protocol}//${location.host}/ws`); setConnection("", "正在连接");
+      ws.onopen = () => setConnection("online", "服务已连接");
+      ws.onmessage = event => {
+        let payload; try { payload = JSON.parse(event.data); } catch { return; }
+        if (payload.type === "connected") applyState(payload.state);
+        else if (payload.type === "event") { eventHistory.push(payload.event); renderEvents(eventHistory); }
+        else if (payload.type === "events_cleared") renderEvents([]);
+        else if (payload.type === "chat_cleared") renderMessages([]);
+        else if (payload.type === "chat") appendMessage(payload.message);
+        else if (payload.type === "chat_start") startStream(payload.message);
+        else if (payload.type === "chat_delta") updateStream(payload);
+        else if (payload.type === "chat_end") endStream(payload.message);
+        else if (payload.type === "agent_status") setAgentStatus(payload.status);
+        else if (payload.type === "system_notice") showToast(payload.notice.title, payload.notice.description);
+        else if (payload.type === "process_status") renderProcessState(payload.process);
+        else if (payload.type === "frame") { $("cameraEmpty").classList.add("hidden"); $("frameTime").textContent = formatTime(payload.timestamp); }
+      };
+      ws.onclose = () => { setConnection("offline", "连接中断"); reconnectTimer = setTimeout(connect, 1800); };
+      ws.onerror = () => ws.close();
+    }
+    $("cameraStream").addEventListener("load", () => $("cameraEmpty").classList.add("hidden"));
+    $("attentionToggle").checked = false;
+    setAttentionEnabled(false);
+    $("attentionToggle").addEventListener("change", event => setAttentionEnabled(event.target.checked));
+    window.addEventListener("pageshow", event => {
+      if (!event.persisted) return;
+      $("attentionToggle").checked = false;
+      setAttentionEnabled(false);
+    });
+    $("clearAllBtn").addEventListener("click", clearAll);
+    $("cameraStream").addEventListener("error", () => $("cameraEmpty").classList.remove("hidden"));
+    $("fullscreenToggle").addEventListener("click", toggleFullscreen);
+    document.querySelectorAll(".launch-btn").forEach(btn => btn.addEventListener("click", () => toggleProcess(btn.dataset.key)));
+    document.addEventListener("fullscreenchange", syncFullscreenButton); document.addEventListener("webkitfullscreenchange", syncFullscreenButton);
+    setInterval(() => { $("clock").textContent = new Date().toLocaleString("zh-CN", { hour12: false }); }, 1000);
+    $("clock").textContent = new Date().toLocaleString("zh-CN", { hour12: false }); loadProcesses(); connect();
+  </script>
+</body>
+</html>

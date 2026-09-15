@@ -1,0 +1,8 @@
+# 排除 config 与 runtime (挂载卷, 不进镜像); 启动读一次, 缺 config 拒启
+# entrypoint.sh 在根, 单独 COPY 作镜像兜底 (见 Dockerfile)
+config
+runtime
+.git
+__pycache__
+*.pyc
+.venv

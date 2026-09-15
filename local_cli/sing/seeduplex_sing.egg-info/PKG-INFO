@@ -1,0 +1,10 @@
+Metadata-Version: 2.4
+Name: seeduplex-sing
+Version: 0.2.0
+Summary: 豆包实时语音模型 3.0（Seeduplex）唱歌工具 CLI
+Requires-Python: >=3.10
+Requires-Dist: websockets>=11.0.3
+Requires-Dist: tomli>=2.0.1; python_version < "3.11"
+Requires-Dist: numpy>=1.26
+Requires-Dist: sounddevice>=0.5
+Requires-Dist: scipy>=1.13

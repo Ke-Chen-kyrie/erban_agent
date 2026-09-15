@@ -1,0 +1,48 @@
+[project]
+name = "zenohrelay"
+version = "0.1.0"
+description = "Foxglove 图像人脸识别标注与 Zenoh 局域网分发"
+requires-python = ">=3.10"
+dependencies = [
+    "eclipse-zenoh==1.10.0",
+    "httpx>=0.28",
+    "numpy>=1.24",
+    "opencv-python>=4.8",
+    "pillow>=10",
+    "python-dotenv>=1.0",
+    "rosbags>=0.11",
+    "websockets>=12",
+]
+
+[project.scripts]
+zenoh-relay-server = "server:main"
+zenoh-relay-client = "client:main"
+
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+py-modules = [
+    "camera_client",
+    "client",
+    "config",
+    "face_detect",
+    "foxglove_client",
+    "ident_client",
+    "logging_config",
+    "main",
+    "protocol",
+    "server",
+    "zenoh_client",
+]
+
+[dependency-groups]
+dev = ["pytest>=8"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.uv]
+index-url = "https://pypi.tuna.tsinghua.edu.cn/simple"
+package = true
